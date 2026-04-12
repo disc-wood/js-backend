@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import authRoutes from './routes/authRoutes.js';
+import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/oaktonInfo', oaktonInfoRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });

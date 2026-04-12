@@ -1,33 +1,35 @@
 import { pgPool } from '../config/database.js';
 
 export default {
-  async createUser({ uid, username, email, firstname, lastname }) {
-    const sql = `INSERT INTO admins (firebase_uid, username, email, firstname, lastname) VALUES ($1, $2, $3, $4, $5) RETURNING id`;
-    const { rows } = await pgPool.query(sql, [uid, username, email, firstname, lastname]);
-    return { id: rows[0].id, uid, username, email };
+  async createStudent({ firstname, lastname, email, age }) {
+    const sql = `INSERT INTO "oakton-info" (firstname, lastname, email, age) VALUES ($1, $2, $3, $4) RETURNING oaktonid`;
+    const { rows } = await pgPool.query(sql, [firstname, lastname, email, age]);
+    return rows[0];
   },
-
-  async upsertUser({ uid, username, email, firstname, lastname }) {
+  async upsertUser({ firstname, lastname, email, age }) {
     const sql = `
-      INSERT INTO admins (firebase_uid, username, email, firstname, lastname)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (firebase_uid) DO UPDATE SET
+      INSERT INTO "oakton-info" (firstname, lastname, email, age)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (oaktonid) DO UPDATE SET
         email = EXCLUDED.email,
         firstname = EXCLUDED.firstname,
-        lastname = EXCLUDED.lastname;
+        lastname = EXCLUDED.lastname
+      RETURNING oaktonid;
     `;
-    await pgPool.query(sql, [uid, username, email, firstname, lastname]);
-    return this.findByUid(uid);
-  },
-
-  async findByUid(uid) {
-    const sql = `SELECT id, firebase_uid AS "firebaseUid", username, email, firstname, lastname FROM admins WHERE firebase_uid = $1`;
-    const { rows } = await pgPool.query(sql, [uid]);
-    return rows[0] || null;
+    const { rows } = await pgPool.query(sql, [firstname, lastname, email, age]);
+    return rows[0];
   },
 
   async getAll() {
-    const { rows } = await pgPool.query(`SELECT username, email, firstname, lastname FROM admins ORDER BY username ASC`);
+    const sql = `SELECT * FROM "oakton-info"`;
+    const { rows } = await pgPool.query(sql);
     return rows;
+  },
+
+  async getAverageAge() {
+    const sql = `SELECT AVG(age) FROM "oakton-info"`;
+    const { rows } = await pgPool.query(sql);
+    return rows[0]; // because it only returns one value.
   }
+  
 };
