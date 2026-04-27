@@ -132,16 +132,39 @@ const authController = {
       }
 
       const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const baseUsername =
+        decodedToken.name?.replace(/\s+/g, '_').toLowerCase() ||
+        decodedToken.email?.split('@')[0] ||
+        `user_${decodedToken.uid.substring(0, 8)}`;
 
-      const user = await userRepository.upsertUser({
-        uid: decodedToken.uid,
-        username: decodedToken.name?.replace(/\s+/g, '_').toLowerCase() ||
-          decodedToken.email?.split('@')[0] ||
-          `user_${decodedToken.uid.substring(0, 8)}`,
-        email: decodedToken.email,
-        firstname: decodedToken.name?.split(' ')[0] || null,
-        lastname: decodedToken.name?.split(' ').slice(1).join(' ') || null,
-      })
+      let user;
+      try {
+        user = await userRepository.upsertUser({
+          uid: decodedToken.uid,
+          username: baseUsername,
+          email: decodedToken.email,
+          firstname: decodedToken.name?.split(' ')[0] || null,
+          lastname: decodedToken.name?.split(' ').slice(1).join(' ') || null,
+        });
+      } catch (error) {
+        // If generated username collides with an existing account, retry
+        // with a deterministic UID suffix so Google signup still succeeds.
+        if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
+          const fallbackUsername = `${baseUsername}_${decodedToken.uid.substring(
+            0,
+            6
+          )}`;
+          user = await userRepository.upsertUser({
+            uid: decodedToken.uid,
+            username: fallbackUsername,
+            email: decodedToken.email,
+            firstname: decodedToken.name?.split(' ')[0] || null,
+            lastname: decodedToken.name?.split(' ').slice(1).join(' ') || null,
+          });
+        } else {
+          throw error;
+        }
+      }
 
       res.cookie('session', idToken, {
         httpOnly: true,
