@@ -11,3 +11,11 @@ CREATE TABLE IF NOT EXISTS users (
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- Oakton intake: add missing columns to the existing "oakton-info" table
+-- (your Supabase already has public."oakton-info" with most fields)
+ALTER TABLE IF EXISTS public."oakton-info"
+  ADD COLUMN IF NOT EXISTS current_city text;
+
+ALTER TABLE IF EXISTS public."oakton-info"
+  ADD COLUMN IF NOT EXISTS zip_code text;

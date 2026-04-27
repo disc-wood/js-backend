@@ -17,6 +17,15 @@ const corsOptions = {
       process.env.FRONTEND_URL_DEV,
     ];
 
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      typeof origin === 'string' &&
+      origin.startsWith('http://localhost:')
+    ) {
+      callback(null, true);
+      return;
+    }
+
     if (allowedOrigins.includes(origin) || !origin) {
       callback(null, true);
     } else {
