@@ -71,27 +71,39 @@ export default {
     return rows;
   },
 
-  async createStudent({ firstname, lastname, email, age }) {
-    const sql = `INSERT INTO "oakton-info" (firstname, lastname, email, age) VALUES ($1, $2, $3, $4) RETURNING oaktonid`;
-    const { rows } = await pgPool.query(sql, [firstname, lastname, email, age]);
+  async createUser({ uid, username, email, firstname, lastname }) {
+    const sql = `
+      INSERT INTO admins (firebase_uid, username, email, firstname, lastname)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const { rows } = await pgPool.query(sql, [uid, username, email, firstname, lastname]);
     return rows[0];
   },
-  async upsertUser({ firstname, lastname, email, age }) {
+
+  async findByUid(uid) {
+    const sql = `SELECT * FROM admins WHERE firebase_uid = $1 LIMIT 1;`;
+    const { rows } = await pgPool.query(sql, [uid]);
+    return rows[0] || null;
+  },
+
+  async upsertUser({ uid, username, email, firstname, lastname }) {
     const sql = `
-      INSERT INTO "oakton-info" (firstname, lastname, email, age)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (oaktonid) DO UPDATE SET
-        email = EXCLUDED.email,
-        firstname = EXCLUDED.firstname,
-        lastname = EXCLUDED.lastname
-      RETURNING oaktonid;
+      INSERT INTO admins (firebase_uid, username, email, firstname, lastname)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (firebase_uid) DO UPDATE SET
+        email       = EXCLUDED.email,
+        firstname   = EXCLUDED.firstname,
+        lastname    = EXCLUDED.lastname,
+        updated_at  = NOW()
+      RETURNING *;
     `;
-    const { rows } = await pgPool.query(sql, [firstname, lastname, email, age]);
+    const { rows } = await pgPool.query(sql, [uid, username, email, firstname, lastname]);
     return rows[0];
   },
 
   async getAll() {
-    const sql = `SELECT * FROM "oakton-info"`;
+    const sql = `SELECT * FROM admins ORDER BY created_at DESC;`;
     const { rows } = await pgPool.query(sql);
     return rows;
   },
