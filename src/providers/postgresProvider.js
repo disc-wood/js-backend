@@ -50,6 +50,74 @@ export default {
     return rows[0];
   },
 
+  async createIhtuIntake({
+    firstName,
+    lastName,
+    email,
+    phoneNumber,
+    gender,
+    dateOfBirth,
+    ageAtEnrollment,
+    ethnicityRace,
+    currentCity,
+    zipCode,
+  }) {
+    const sql = `
+      INSERT INTO "ihtu-info" (
+        firstname,
+        lastname,
+        email,
+        phone_num,
+        gender,
+        birthday,
+        age,
+        race,
+        current_city,
+        zip_code
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING ihtuid;
+    `;
+
+    const phoneDigits = String(phoneNumber || '').replace(/\D/g, '');
+    const phoneAsBigInt = phoneDigits ? BigInt(phoneDigits).toString() : null;
+
+    const { rows } = await pgPool.query(sql, [
+      firstName,
+      lastName,
+      email,
+      phoneAsBigInt,
+      gender,
+      dateOfBirth,
+      ageAtEnrollment,
+      ethnicityRace,
+      currentCity,
+      zipCode,
+    ]);
+    return rows[0];
+  },
+
+  async getAllIhtuIntakes() {
+    const sql = `
+      SELECT
+        ihtuid AS id,
+        firstname AS "firstName",
+        lastname AS "lastName",
+        email,
+        phone_num AS "phoneNumber",
+        gender,
+        birthday AS "dateOfBirth",
+        age AS "ageAtEnrollment",
+        race AS "ethnicityRace",
+        current_city AS "currentCity",
+        zip_code AS "zipCode"
+      FROM "ihtu-info"
+      ORDER BY ihtuid DESC;
+    `;
+    const { rows } = await pgPool.query(sql);
+    return rows;
+  },
+
   async getAllOaktonIntakes() {
     const sql = `
       SELECT
