@@ -4,41 +4,44 @@ import userRepository from '../repositories/userRepository.js';
 const authController = {
   async signup(req, res) {
     try {
-      const { email, password, username, firstname, lastname } = req.body;
+      const { email, password } = req.body;
 
-      if (!email || !password || !username) {
+      // Only Firebase needs email + password
+      if (!email || !password) {
         return res.status(400).json({
-          error: 'Email, password, and username are required',
+          error: 'Email and password are required',
         });
       }
 
+      // Create Firebase Auth user
       const userRecord = await admin.auth().createUser({
         email,
         password,
-        displayName: username,
       });
 
+      // Store minimal user profile in DB
       const user = await userRepository.createUser({
         uid: userRecord.uid,
-        username,
         email,
-        firstname,
-        lastname
-      })
-
-      res.status(201).json({
-        message: 'User created successfully',
-        user
       });
+
+      return res.status(201).json({
+        message: 'User created successfully',
+        user,
+      });
+
     } catch (error) {
       console.error('Signup error:', error);
+
       if (error.code === 'auth/email-already-exists') {
-        return res.status(400).json({ error: 'Email already in use' });
+        return res.status(400).json({
+          error: 'Email already in use',
+        });
       }
-      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ error: 'Username already exists' });
-      }
-      res.status(500).json({ error: 'Internal server error' });
+
+      return res.status(500).json({
+        error: 'Internal server error',
+      });
     }
   },
 
@@ -62,13 +65,17 @@ const authController = {
         path: '/',
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         message: 'Login successful',
         uid: decodedToken.uid,
       });
+
     } catch (error) {
       console.error('Login error:', error);
-      res.status(401).json({ error: 'Authentication failed' });
+
+      return res.status(401).json({
+        error: 'Authentication failed',
+      });
     }
   },
 
@@ -78,21 +85,28 @@ const authController = {
         req.cookies.session || req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return res.status(401).json({
+          error: 'Not authenticated',
+        });
       }
 
       const decodedToken = await admin.auth().verifyIdToken(token);
 
       const user = await userRepository.findByUid(decodedToken.uid);
 
-      return res.json(user || {
-        firebaseUid: decodedToken.uid,
-        email: decodedToken.email,
-        username: decodedToken.email?.split('@')[0] || 'user',
-      });
+      return res.json(
+        user || {
+          firebaseUid: decodedToken.uid,
+          email: decodedToken.email,
+        }
+      );
+
     } catch (error) {
       console.error('ME endpoint error:', error);
-      res.status(401).json({ error: 'Authentication failed' });
+
+      return res.status(401).json({
+        error: 'Authentication failed',
+      });
     }
   },
 
@@ -104,10 +118,17 @@ const authController = {
         sameSite: 'strict',
         path: '/',
       });
-      res.json({ message: 'Logged out successfully' });
+
+      return res.json({
+        message: 'Logged out successfully',
+      });
+
     } catch (error) {
       console.error('Logout error:', error);
-      res.status(500).json({ error: 'Logout failed' });
+
+      return res.status(500).json({
+        error: 'Logout failed',
+      });
     }
   },
 
@@ -115,56 +136,33 @@ const authController = {
     try {
       const users = await userRepository.getAll();
 
-      res.status(200).json(users);
+      return res.status(200).json(users);
+
     } catch (error) {
       console.error('Get all users error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+
+      return res.status(500).json({
+        error: 'Internal server error',
+      });
     }
   },
 
-  // Called after Google OAuth (popup or redirect) to sync the Firebase user into the database.
   async handleToken(req, res) {
     try {
       const { idToken } = req.body;
 
       if (!idToken) {
-        return res.status(400).json({ error: 'No ID token provided' });
+        return res.status(400).json({
+          error: 'No ID token provided',
+        });
       }
 
       const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const baseUsername =
-        decodedToken.name?.replace(/\s+/g, '_').toLowerCase() ||
-        decodedToken.email?.split('@')[0] ||
-        `user_${decodedToken.uid.substring(0, 8)}`;
 
-      let user;
-      try {
-        user = await userRepository.upsertUser({
-          uid: decodedToken.uid,
-          username: baseUsername,
-          email: decodedToken.email,
-          firstname: decodedToken.name?.split(' ')[0] || null,
-          lastname: decodedToken.name?.split(' ').slice(1).join(' ') || null,
-        });
-      } catch (error) {
-        // If generated username collides with an existing account, retry
-        // with a deterministic UID suffix so Google signup still succeeds.
-        if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
-          const fallbackUsername = `${baseUsername}_${decodedToken.uid.substring(
-            0,
-            6
-          )}`;
-          user = await userRepository.upsertUser({
-            uid: decodedToken.uid,
-            username: fallbackUsername,
-            email: decodedToken.email,
-            firstname: decodedToken.name?.split(' ')[0] || null,
-            lastname: decodedToken.name?.split(' ').slice(1).join(' ') || null,
-          });
-        } else {
-          throw error;
-        }
-      }
+      const user = await userRepository.upsertUser({
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+      });
 
       res.cookie('session', idToken, {
         httpOnly: true,
@@ -174,15 +172,17 @@ const authController = {
         path: '/',
       });
 
-      res.json({ success: true, user });
+      return res.json({
+        success: true,
+        user,
+      });
+
     } catch (error) {
       console.error('Token handling error:', error);
-      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
-        return res
-          .status(400)
-          .json({ error: 'Username already exists, please choose another' });
-      }
-      res.status(500).json({ error: 'Internal server error' });
+
+      return res.status(500).json({
+        error: 'Internal server error',
+      });
     }
   },
 };

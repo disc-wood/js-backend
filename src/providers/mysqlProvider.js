@@ -1,33 +1,56 @@
 import { pool } from '../config/database.js';
 
 export default {
-  async createUser({ uid, username, email, firstname, lastname }) {
-    const sql = `INSERT INTO users (firebase_uid, username, email, firstname, lastname) VALUES (?, ?, ?, ?, ?)`;
-    const [result] = await pool.execute(sql, [uid, username, email, firstname, lastname]);
-    return { id: result.insertId, uid, username, email };
+  // Create a new user (minimal schema: uid + email only)
+  async createUser({ uid, email }) {
+    const sql = `
+      INSERT INTO users (firebase_uid, email)
+      VALUES (?, ?)
+    `;
+
+    const [result] = await pool.execute(sql, [uid, email]);
+
+    return {
+      id: result.insertId,
+      uid,
+      email,
+    };
   },
 
-  async upsertUser({ uid, username, email, firstname, lastname }) {
+  // Insert or update user (sync Firebase → DB)
+  async upsertUser({ uid, email }) {
     const sql = `
-      INSERT INTO users (firebase_uid, username, email, firstname, lastname)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (firebase_uid, email)
+      VALUES (?, ?)
       ON DUPLICATE KEY UPDATE
-        email = VALUES(email),
-        firstname = VALUES(firstname),
-        lastname = VALUES(lastname);
+        email = VALUES(email)
     `;
-    await pool.execute(sql, [uid, username, email, firstname, lastname]);
+
+    await pool.execute(sql, [uid, email]);
+
     return this.findByUid(uid);
   },
 
+  // Find user by Firebase UID
   async findByUid(uid) {
-    const sql = `SELECT id, firebase_uid AS firebaseUid, username, email, firstname, lastname FROM users WHERE firebase_uid = ?`;
+    const sql = `
+      SELECT id, firebase_uid AS firebaseUid, email
+      FROM users
+      WHERE firebase_uid = ?
+    `;
+
     const [rows] = await pool.execute(sql, [uid]);
     return rows[0] || null;
   },
 
+  // Get all users (minimal)
   async getAll() {
-    const [rows] = await pool.execute(`SELECT username, email, firstname, lastname FROM users ORDER BY username ASC`);
+    const [rows] = await pool.execute(`
+      SELECT firebase_uid AS firebaseUid, email
+      FROM users
+      ORDER BY email ASC
+    `);
+
     return rows;
-  }
+  },
 };
