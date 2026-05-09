@@ -14,12 +14,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "firebase": "^12.10.0",
-    "firebase-admin": "^13.6.0",
+    "firebase-admin": "^13.9.0",
     "ini": "^5.0.0",
     "mysql2": "^3.12.0",
     "pg": "^8.13.0"

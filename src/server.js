@@ -6,6 +6,8 @@ import express from 'express';
 import authRoutes from './routes/authRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
 import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
+import inviteRoutes from './routes/inviteRoutes.js';
+
 
 dotenv.config();
 
@@ -40,7 +42,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
 app.use(cookieParser());
 app.use(express.json());
 
@@ -52,6 +53,7 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/oaktonInfo', oaktonInfoRoutes);
 app.use('/ihtuInfo', ihtuInfoRoutes);
+app.use('/invite', inviteRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
