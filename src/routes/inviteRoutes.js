@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const inviteLink = `${process.env.FRONTEND_URL_DEV}/invite?token=${data.token}`;
+  const inviteLink = `${process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV}/invite?token=${data.token}`;
 
   const { error: emailError } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL,
