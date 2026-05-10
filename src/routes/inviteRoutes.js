@@ -127,4 +127,87 @@ router.post('/accept', async (req, res) => {
   return res.json({ success: true });
 });
 
+// List all invitations (pending, accepted, expired)
+router.get('/list', async (req, res) => {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('invitations')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ invitations: data });
+});
+
+// List active supervisors with their program assignments and emails
+router.get('/active', async (req, res) => {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('user_assignments')
+    .select('*');
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const admin = (await import('../config/firebase.js')).default;
+  const enriched = await Promise.all(
+    data.map(async (row) => {
+      try {
+        const user = await admin.auth().getUser(row.user_id);
+        return { ...row, email: user.email };
+      } catch {
+        return { ...row, email: 'unknown' };
+      }
+    })
+  );
+
+  return res.json({ supervisors: enriched });
+});
+
+// Revoke a supervisor's access to a specific program
+router.delete('/revoke', async (req, res) => {
+  const supabase = getSupabase();
+  const { userId, programId } = req.body;
+
+  if (!userId || !programId) {
+    return res.status(400).json({ error: 'Missing userId or programId' });
+  }
+
+  const { error: deleteError } = await supabase
+    .from('user_assignments')
+    .delete()
+    .eq('user_id', userId)
+    .eq('program_id', programId);
+
+  if (deleteError) return res.status(500).json({ error: deleteError.message });
+
+  // if the user has no other assignments, remove their supervisor role
+  const { data: remaining } = await supabase
+    .from('user_assignments')
+    .select('program_id')
+    .eq('user_id', userId);
+
+  if (!remaining || remaining.length === 0) {
+    const admin = (await import('../config/firebase.js')).default;
+    await admin.auth().setCustomUserClaims(userId, {});
+  }
+
+  return res.json({ success: true });
+});
+
+// Cancel a pending invite (before it's accepted)
+router.delete('/cancel/:token', async (req, res) => {
+  const supabase = getSupabase();
+  const { token } = req.params;
+
+  const { error } = await supabase
+    .from('invitations')
+    .delete()
+    .eq('token', token);
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ success: true });
+});
+
 export default router;
