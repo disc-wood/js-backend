@@ -11,6 +11,31 @@ const getSupabase = () => createClient(
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
+// Generate an invite link without sending an email
+router.post('/generate', async (req, res) => {
+  const supabase = getSupabase();
+  const { email, programId } = req.body;
+
+  const { data, error } = await supabase
+    .from('invitations')
+    .insert({
+      email,
+      program_id: programId,
+      status: 'pending',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const baseUrl = process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV;
+  const inviteLink = `${baseUrl}/invite?token=${data.token}`;
+
+  return res.json({ success: true, inviteLink });
+});
+
+// Optional: send via email (kept for future when domain is verified)
 router.post('/', async (req, res) => {
   const supabase = getSupabase();
   const resend = getResend();
@@ -29,7 +54,8 @@ router.post('/', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const inviteLink = `${process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV}/invite?token=${data.token}`;
+  const baseUrl = process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV;
+  const inviteLink = `${baseUrl}/invite?token=${data.token}`;
 
   const { error: emailError } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL,
@@ -61,7 +87,6 @@ router.get('/validate', async (req, res) => {
     .single();
 
   if (error || !data) return res.status(404).json({ error: 'Invite not found', status: 'invalid' });
-
   if (data.status === 'accepted') return res.status(400).json({ error: 'Invite already used', status: 'used' });
 
   if (new Date(data.expires_at) < new Date()) {
@@ -96,7 +121,7 @@ router.post('/accept', async (req, res) => {
 
   await supabase.from('invitations').update({ status: 'accepted' }).eq('token', token);
 
-  const admin = (await import('../config/firebase.js')).default
+  const admin = (await import('../config/firebase.js')).default;
   await admin.auth().setCustomUserClaims(uid, { role: 'supervisor' });
 
   return res.json({ success: true });
