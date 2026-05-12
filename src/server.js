@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
 import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
 import inviteRoutes from './routes/inviteRoutes.js';
+import usersRoutes from './routes/users.js';  
 
 
 dotenv.config();
@@ -54,6 +55,7 @@ app.use('/auth', authRoutes);
 app.use('/oaktonInfo', oaktonInfoRoutes);
 app.use('/ihtuInfo', ihtuInfoRoutes);
 app.use('/invite', inviteRoutes);
+app.use('/users', usersRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
