@@ -9,13 +9,18 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const getTransporter = () => nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const getTransporter = () => {
+  console.log('GMAIL_USER:', process.env.GMAIL_USER);
+  console.log('GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? 'loaded' : 'MISSING');
+  
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+};
 
 // Generate invite and send email automatically
 router.post('/generate', async (req, res) => {
