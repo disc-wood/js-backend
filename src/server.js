@@ -7,8 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
 import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
 import inviteRoutes from './routes/inviteRoutes.js';
-import usersRoutes from './routes/users.js';  
-
+import usersRoutes from './routes/users.js';
 
 dotenv.config();
 
@@ -20,6 +19,9 @@ const corsOptions = {
       process.env.FRONTEND_URL,
       process.env.FRONTEND_URL_DEV,
     ];
+
+    console.log('Request origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
 
     if (
       process.env.NODE_ENV !== 'production' &&
