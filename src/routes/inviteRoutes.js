@@ -1,6 +1,6 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
@@ -9,9 +9,15 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
+const getTransporter = () => nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
-// Generate an invite link without sending an email
+// Generate invite and send email automatically
 router.post('/generate', async (req, res) => {
   const supabase = getSupabase();
   const { email, programId } = req.body;
@@ -32,44 +38,24 @@ router.post('/generate', async (req, res) => {
   const baseUrl = process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV;
   const inviteLink = `${baseUrl}/invite?token=${data.token}`;
 
-  return res.json({ success: true, inviteLink });
-});
-
-// Optional: send via email (kept for future when domain is verified)
-router.post('/', async (req, res) => {
-  const supabase = getSupabase();
-  const resend = getResend();
-  const { email, programId } = req.body;
-
-  const { data, error } = await supabase
-    .from('invitations')
-    .insert({
-      email,
-      program_id: programId,
-      status: 'pending',
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    })
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-
-  const baseUrl = process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV;
-  const inviteLink = `${baseUrl}/invite?token=${data.token}`;
-
-  const { error: emailError } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL,
-    to: email,
-    subject: "You've been invited to the Learner Tracking System",
-    html: `
-      <p>You've been invited to supervise a program on the Learner Tracking System.</p>
-      <p>Click the link below to accept your invitation:</p>
-      <a href="${inviteLink}">${inviteLink}</a>
-      <p>This link will expire in 7 days.</p>
-    `,
-  });
-
-  if (emailError) return res.status(500).json({ error: emailError.message });
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "You've been invited to the Learner Tracking System",
+      html: `
+        <p>Hi,</p>
+        <p>You've been invited to supervise a program on the Learner Tracking System.</p>
+        <p>Click the link below to accept your invitation:</p>
+        <a href="${inviteLink}">${inviteLink}</a>
+        <p>This link will expire in 7 days.</p>
+      `,
+    });
+  } catch (emailError) {
+    console.error('Email failed:', emailError);
+    return res.status(500).json({ error: 'Invite created but email failed to send.' });
+  }
 
   return res.json({ success: true });
 });
@@ -127,7 +113,6 @@ router.post('/accept', async (req, res) => {
   return res.json({ success: true });
 });
 
-// List all invitations (pending, accepted, expired)
 router.get('/list', async (req, res) => {
   const supabase = getSupabase();
 
@@ -140,7 +125,6 @@ router.get('/list', async (req, res) => {
   return res.json({ invitations: data });
 });
 
-// List active supervisors with their program assignments and emails
 router.get('/active', async (req, res) => {
   const supabase = getSupabase();
 
@@ -165,7 +149,6 @@ router.get('/active', async (req, res) => {
   return res.json({ supervisors: enriched });
 });
 
-// Revoke a supervisor's access to a specific program
 router.delete('/revoke', async (req, res) => {
   const supabase = getSupabase();
   const { userId, programId } = req.body;
@@ -182,7 +165,6 @@ router.delete('/revoke', async (req, res) => {
 
   if (deleteError) return res.status(500).json({ error: deleteError.message });
 
-  // if the user has no other assignments, remove their supervisor role
   const { data: remaining } = await supabase
     .from('user_assignments')
     .select('program_id')
@@ -196,7 +178,6 @@ router.delete('/revoke', async (req, res) => {
   return res.json({ success: true });
 });
 
-// Cancel a pending invite (before it's accepted)
 router.delete('/cancel/:token', async (req, res) => {
   const supabase = getSupabase();
   const { token } = req.params;
