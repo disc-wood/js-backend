@@ -24,7 +24,6 @@ const corsOptions = {
     console.log('Allowed origins:', allowedOrigins);
 
     if (
-      process.env.NODE_ENV !== 'production' &&
       typeof origin === 'string' &&
       origin.startsWith('http://localhost:')
     ) {
