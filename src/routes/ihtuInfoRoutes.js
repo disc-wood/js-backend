@@ -1,5 +1,6 @@
 import express from 'express';
 import postgresProvider from '../providers/postgresProvider.js';
+import transporter from '../config/mailer.js';
 
 const router = express.Router();
 
@@ -60,6 +61,18 @@ router.post('/intakes', async (req, res) => {
       currentCity,
       zipCode,
     });
+
+    transporter.sendMail({
+      from: `"I Hope They Understand" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: 'Your IHTU Application Has Been Received',
+      html: `
+        <p>Hi ${firstName},</p>
+        <p>Thank you for submitting your <strong>I Hope They Understand</strong> application. We've received your information and will be in touch soon.</p>
+        <p>If you have any questions in the meantime, feel free to reply to this email.</p>
+        <p>— The IHTU Team</p>
+      `,
+    }).catch((err) => console.error('IHTU confirmation email failed:', err));
 
     res.status(201).json({ success: true, ...created });
   } catch (error) {

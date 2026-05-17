@@ -57,4 +57,50 @@ export default {
 
     return rows;
   },
+
+  async getAllIhtuIntakes() {
+    const { rows } = await pgPool.query(
+      `SELECT * FROM "ihtu-info" ORDER BY ihtuid DESC`
+    );
+    return rows;
+  },
+
+  async createIhtuIntake({ firstName, lastName, email, phoneNumber, gender, dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode }) {
+    // phone_num is BIGINT in Supabase — strip non-digits before inserting
+    const phoneDigits = phoneNumber ? Number(String(phoneNumber).replace(/\D/g, '')) : null;
+    const sql = `
+      INSERT INTO "ihtu-info"
+        (firstname, lastname, email, phone_num, gender, birthday, age, race, current_city, zip_code)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
+    `;
+    const { rows } = await pgPool.query(sql, [
+      firstName, lastName, email, phoneDigits, gender,
+      dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode,
+    ]);
+    return rows[0];
+  },
+
+  async getAllOaktonIntakes() {
+    const { rows } = await pgPool.query(
+      `SELECT * FROM "oakton-info" ORDER BY oaktonid DESC`
+    );
+    return rows;
+  },
+
+  async createOaktonIntake({ firstName, lastName, email, phoneNumber, gender, dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode }) {
+    // phone_num is BIGINT in Supabase — strip non-digits before inserting
+    const phoneDigits = phoneNumber ? Number(String(phoneNumber).replace(/\D/g, '')) : null;
+    const sql = `
+      INSERT INTO "oakton-info"
+        (firstname, lastname, email, phone_num, gender, birthday, age, race, current_city, zip_code)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
+    `;
+    const { rows } = await pgPool.query(sql, [
+      firstName, lastName, email, phoneDigits, gender,
+      dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode,
+    ]);
+    return rows[0];
+  },
 };

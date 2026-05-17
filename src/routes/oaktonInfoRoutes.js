@@ -1,5 +1,6 @@
 import express from 'express';
 import postgresProvider from '../providers/postgresProvider.js';
+import transporter from '../config/mailer.js';
 
 
 const router = express.Router();
@@ -63,6 +64,18 @@ router.post('/intakes', async (req, res) => {
       currentCity,
       zipCode,
     });
+
+    transporter.sendMail({
+      from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: 'Your Oakton WEI Application Has Been Received',
+      html: `
+        <p>Hi ${firstName},</p>
+        <p>Thank you for submitting your <strong>Oakton Workforce Empowerment Initiative</strong> application. We've received your information and will be in touch soon.</p>
+        <p>If you have any questions, please email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+        <p>— The Oakton WEI Team</p>
+      `,
+    }).catch((err) => console.error('Oakton confirmation email failed:', err));
 
     res.status(201).json({ success: true, ...created });
   } catch (error) {
