@@ -1,7 +1,6 @@
 import { pgPool } from '../config/database.js';
 
 export default {
-  // Create a new user (minimal schema)
   async createUser({ uid, email }) {
     const sql = `
       INSERT INTO users (firebase_uid, email)
@@ -42,30 +41,27 @@ export default {
     return rows;
   },
 
-  // IHTU intake (unchanged for now)
   async getAllIhtuIntakes() {
     const { rows } = await pgPool.query(
-      `SELECT * FROM "ihtu-info" ORDER BY ihtuid DESC`
+      `SELECT * FROM ihtu_intakes ORDER BY submitted_at DESC`
     );
     return rows;
   },
 
   async createIhtuIntake({ firstName, lastName, email, phoneNumber, gender, dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode }) {
-    const phoneDigits = phoneNumber ? Number(String(phoneNumber).replace(/\D/g, '')) : null;
     const sql = `
-      INSERT INTO "ihtu-info"
-        (firstname, lastname, email, phone_num, gender, birthday, age, race, current_city, zip_code)
+      INSERT INTO ihtu_intakes
+        (first_name, last_name, email, phone_number, gender, date_of_birth, age_at_enrollment, ethnicity_race, current_city, zip_code)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
     const { rows } = await pgPool.query(sql, [
-      firstName, lastName, email, phoneDigits, gender,
+      firstName, lastName, email, phoneNumber, gender,
       dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode,
     ]);
     return rows[0];
   },
 
-  // === NEW OAKTON INTAKE ===
   async getAllOaktonIntakes() {
     const { rows } = await pgPool.query(
       `SELECT * FROM oakton_intakes ORDER BY submitted_at DESC`
