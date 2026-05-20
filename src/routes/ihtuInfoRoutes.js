@@ -4,17 +4,10 @@ import transporter from '../config/mailer.js';
 
 const router = express.Router();
 
-const requiredFields = [
-  'firstName',
-  'lastName',
-  'email',
-  'phoneNumber',
-  'gender',
-  'dateOfBirth',
-  'ageAtEnrollment',
-  'ethnicityRace',
-  'currentCity',
-  'zipCode',
+const REQUIRED_FIELDS = [
+  'firstName', 'lastName', 'email', 'phoneNumber',
+  'gender', 'dateOfBirth', 'ageAtEnrollment',
+  'ethnicityRace', 'currentCity', 'zipCode',
 ];
 
 router.get('/intakes', async (_req, res) => {
@@ -29,7 +22,7 @@ router.get('/intakes', async (_req, res) => {
 
 router.post('/intakes', async (req, res) => {
   try {
-    const missing = requiredFields.filter(
+    const missing = REQUIRED_FIELDS.filter(
       (k) => req.body?.[k] === undefined || req.body?.[k] === null || req.body?.[k] === ''
     );
     if (missing.length) {
@@ -37,29 +30,16 @@ router.post('/intakes', async (req, res) => {
     }
 
     const {
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      gender,
-      dateOfBirth,
-      ageAtEnrollment,
-      ethnicityRace,
-      currentCity,
-      zipCode,
+      firstName, lastName, email, phoneNumber,
+      gender, dateOfBirth, ageAtEnrollment,
+      ethnicityRace, currentCity, zipCode,
     } = req.body;
 
     const created = await postgresProvider.createIhtuIntake({
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      gender,
-      dateOfBirth,
+      firstName, lastName, email, phoneNumber,
+      gender, dateOfBirth,
       ageAtEnrollment: Number(ageAtEnrollment),
-      ethnicityRace,
-      currentCity,
-      zipCode,
+      ethnicityRace, currentCity, zipCode,
     });
 
     transporter.sendMail({
