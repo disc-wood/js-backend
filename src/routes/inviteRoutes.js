@@ -1,6 +1,6 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import nodemailer from 'nodemailer';
+import transporter from '../config/mailer.js';
 
 const router = express.Router();
 
@@ -8,19 +8,6 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
-
-const getTransporter = () => {
-  console.log('GMAIL_USER:', process.env.GMAIL_USER);
-  console.log('GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? 'loaded' : 'MISSING');
-  
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-};
 
 // Generate invite and send email automatically
 router.post('/generate', async (req, res) => {
@@ -44,7 +31,6 @@ router.post('/generate', async (req, res) => {
   const inviteLink = `${baseUrl}/invite?token=${data.token}`;
 
   try {
-    const transporter = getTransporter();
     await transporter.sendMail({
       from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
       to: email,
