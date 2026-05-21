@@ -4,59 +4,65 @@ import transporter from '../config/mailer.js';
 
 const router = express.Router();
 
+// All required fields from the new IHTU form
 const REQUIRED_FIELDS = [
-  'firstName', 'lastName', 'email', 'phoneNumber',
-  'gender', 'dateOfBirth', 'ageAtEnrollment',
-  'ethnicityRace', 'currentCity', 'zipCode',
+  'firstName', 'lastName', 'email', 'phoneNumber', 'gender',
+  'dateOfBirth', 'ethnicityRace', 'currentCity', 'zipCode',
+  'age',
+  'knowsHealthyRacialIdentity',
+  'discussedRacialIdentity',
+  'discussedCulturalCompetence',
 ];
 
+function isEmpty(value) {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string' && value.trim() === '') return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+}
+
+// GET all IHTU intakes (for Database page)
 router.get('/intakes', async (_req, res) => {
   try {
     const data = await postgresProvider.getAllIhtuIntakes();
     res.json(data);
   } catch (error) {
-    console.error('Failed to fetch IHTU intakes:', error);
+    console.error('Failed to fetch ihtu intakes:', error);
     res.status(500).json({ error: 'Failed to fetch data' });
   }
 });
 
+// POST a new IHTU intake (from the public form)
 router.post('/intakes', async (req, res) => {
   try {
-    const missing = REQUIRED_FIELDS.filter(
-      (k) => req.body?.[k] === undefined || req.body?.[k] === null || req.body?.[k] === ''
-    );
+    const missing = REQUIRED_FIELDS.filter((key) => isEmpty(req.body?.[key]));
+
     if (missing.length) {
-      return res.status(400).json({ error: 'Missing required fields', missing });
+      return res.status(400).json({
+        error: 'Missing required fields',
+        missing,
+      });
     }
 
-    const {
-      firstName, lastName, email, phoneNumber,
-      gender, dateOfBirth, ageAtEnrollment,
-      ethnicityRace, currentCity, zipCode,
-    } = req.body;
+    const created = await postgresProvider.createIhtuIntake(req.body);
 
-    const created = await postgresProvider.createIhtuIntake({
-      firstName, lastName, email, phoneNumber,
-      gender, dateOfBirth,
-      ageAtEnrollment: Number(ageAtEnrollment),
-      ethnicityRace, currentCity, zipCode,
-    });
+    // Send confirmation email (non-blocking)
+    transporter
+      .sendMail({
+        from: `"I Hope They Understand" <${process.env.GMAIL_USER}>`,
+        to: req.body.email,
+        subject: 'Your IHTU Application Has Been Received',
+        html: `
+          <p>Hi ${req.body.firstName},</p>
+          <p>Thank you for submitting your <strong>I Hope They Understand</strong> application. We've received your information and will be in touch soon.</p>
+          <p>— The IHTU Team</p>
+        `,
+      })
+      .catch((err) => console.error('IHTU confirmation email failed:', err));
 
-    transporter.sendMail({
-      from: `"I Hope They Understand" <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: 'Your IHTU Application Has Been Received',
-      html: `
-        <p>Hi ${firstName},</p>
-        <p>Thank you for submitting your <strong>I Hope They Understand</strong> application. We've received your information and will be in touch soon.</p>
-        <p>If you have any questions in the meantime, feel free to reply to this email.</p>
-        <p>— The IHTU Team</p>
-      `,
-    }).catch((err) => console.error('IHTU confirmation email failed:', err));
-
-    res.status(201).json({ success: true, ...created });
+    res.status(201).json({ success: true, intake: created });
   } catch (error) {
-    console.error('Failed to create IHTU intake:', error);
+    console.error('Failed to create ihtu intake:', error);
     res.status(500).json({ error: 'Failed to save intake' });
   }
 });

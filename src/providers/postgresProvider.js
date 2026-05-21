@@ -41,6 +41,7 @@ export default {
     return rows;
   },
 
+  // === IHTU INTAKE ===
   async getAllIhtuIntakes() {
     const { rows } = await pgPool.query(
       `SELECT * FROM ihtu_intakes ORDER BY submitted_at DESC`
@@ -48,20 +49,54 @@ export default {
     return rows;
   },
 
-  async createIhtuIntake({ firstName, lastName, email, phoneNumber, gender, dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode }) {
+  async createIhtuIntake(payload) {
     const sql = `
-      INSERT INTO ihtu_intakes
-        (first_name, last_name, email, phone_number, gender, date_of_birth, age_at_enrollment, ethnicity_race, current_city, zip_code)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO ihtu_intakes (
+        first_name, last_name, email, phone_number, gender,
+        date_of_birth, age_at_enrollment,
+        ethnicity_race, ethnicity_race_other,
+        current_city, zip_code,
+        age,
+        knows_healthy_racial_identity,
+        discussed_racial_identity,
+        discussed_cultural_competence
+      )
+      VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7,
+        $8, $9,
+        $10, $11,
+        $12,
+        $13,
+        $14,
+        $15
+      )
       RETURNING *
     `;
-    const { rows } = await pgPool.query(sql, [
-      firstName, lastName, email, phoneNumber, gender,
-      dateOfBirth, ageAtEnrollment, ethnicityRace, currentCity, zipCode,
-    ]);
+
+    const values = [
+      payload.firstName,
+      payload.lastName,
+      payload.email,
+      payload.phoneNumber,
+      payload.gender,
+      payload.dateOfBirth,
+      payload.ageAtEnrollment ?? null,
+      payload.ethnicityRace,
+      payload.ethnicityRaceOther || null,
+      payload.currentCity,
+      payload.zipCode,
+      Number(payload.age),
+      payload.knowsHealthyRacialIdentity,
+      payload.discussedRacialIdentity,
+      payload.discussedCulturalCompetence,
+    ];
+
+    const { rows } = await pgPool.query(sql, values);
     return rows[0];
   },
 
+  // === OAKTON INTAKE ===
   async getAllOaktonIntakes() {
     const { rows } = await pgPool.query(
       `SELECT * FROM oakton_intakes ORDER BY submitted_at DESC`
