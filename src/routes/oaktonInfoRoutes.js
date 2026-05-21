@@ -186,6 +186,16 @@ router.get('/term-dates', async (_req, res) => {
   }
 });
 
+router.get('/term-dates/current', async (_req, res) => {
+  try {
+    const data = await postgresProvider.getCurrentTermDate();
+    res.json(data);
+  } catch (error) {
+    console.error('Failed to fetch current term:', error);
+    res.status(500).json({ error: 'Failed to fetch current term' });
+  }
+});
+
 router.put('/term-dates', async (req, res) => {
   try {
     const { year, season, session, startDate, endDate } = req.body;

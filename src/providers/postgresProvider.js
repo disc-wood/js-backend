@@ -331,4 +331,13 @@ async deleteTermDate(id) {
     );
     return rows[0] || null;
   },
+  async getCurrentTermDate() {
+  const { rows } = await pgPool.query(
+    `SELECT * FROM term_dates
+     WHERE CURRENT_DATE BETWEEN start_date AND end_date
+     ORDER BY start_date DESC
+     LIMIT 1`
+  );
+  return rows[0] || null;
+},
 };
