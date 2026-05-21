@@ -97,4 +97,82 @@ router.post('/upsertUser', async (req, res) => {
   }
 });
 
+// === UPDATE INTAKE STATUS ===
+// PATCH /oaktonInfo/intakes/:id/status — supervisor changes status (Applied/Accepted/etc)
+router.patch('/intakes/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['Applied', 'Accepted', 'Rejected', 'Waitlisted'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status', validStatuses });
+    }
+
+    const updated = await postgresProvider.updateOaktonIntakeStatus(id, status);
+    if (!updated) {
+      return res.status(404).json({ error: 'Intake not found' });
+    }
+
+    // If accepted, automatically create an enrolled record
+    if (status === 'Accepted') {
+      try {
+        await postgresProvider.createOaktonEnrolledFromIntake(id);
+      } catch (err) {
+        console.error('Failed to auto-create enrolled record:', err);
+        // Don't fail the status update if enrolled creation fails
+      }
+    }
+
+    res.json({ success: true, intake: updated });
+  } catch (error) {
+    console.error('Failed to update intake status:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// === GET ENROLLED STUDENTS ===
+router.get('/enrolled', async (_req, res) => {
+  try {
+    const data = await postgresProvider.getAllOaktonEnrolled();
+    res.json(data);
+  } catch (error) {
+    console.error('Failed to fetch enrolled students:', error);
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
+// === CREATE ENROLLED MANUALLY (in case admin wants to add without going through intake) ===
+router.post('/enrolled', async (req, res) => {
+  try {
+    const { intakeId } = req.body;
+    if (!intakeId) {
+      return res.status(400).json({ error: 'intakeId is required' });
+    }
+
+    const created = await postgresProvider.createOaktonEnrolledFromIntake(intakeId);
+    res.status(201).json({ success: true, enrolled: created });
+  } catch (error) {
+    console.error('Failed to create enrolled record:', error);
+    res.status(500).json({ error: error.message || 'Failed to create enrolled record' });
+  }
+});
+
+// === UPDATE ENROLLED STUDENT FIELDS ===
+router.patch('/enrolled/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await postgresProvider.updateOaktonEnrolled(id, req.body);
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Enrolled record not found' });
+    }
+
+    res.json({ success: true, enrolled: updated });
+  } catch (error) {
+    console.error('Failed to update enrolled record:', error);
+    res.status(500).json({ error: error.message || 'Failed to update record' });
+  }
+});
+
 export default router;

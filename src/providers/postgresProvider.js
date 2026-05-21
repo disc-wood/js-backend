@@ -175,4 +175,104 @@ export default {
     const { rows } = await pgPool.query(sql, values);
     return rows[0];
   },
+  // === OAKTON INTAKE STATUS ===
+async updateOaktonIntakeStatus(id, status) {
+  const sql = `
+    UPDATE oakton_intakes
+    SET status = $1
+    WHERE id = $2
+    RETURNING *
+  `;
+  const { rows } = await pgPool.query(sql, [status, id]);
+  return rows[0];
+},
+
+// === OAKTON ENROLLED ===
+async getAllOaktonEnrolled() {
+  const { rows } = await pgPool.query(
+    `SELECT * FROM oakton_enrolled WHERE is_archived = FALSE ORDER BY enrolled_at DESC`
+  );
+  return rows;
+},
+
+async createOaktonEnrolledFromIntake(intakeId) {
+  // Fetch the source intake row
+  const { rows: intakeRows } = await pgPool.query(
+    `SELECT * FROM oakton_intakes WHERE id = $1`,
+    [intakeId]
+  );
+  const intake = intakeRows[0];
+  if (!intake) {
+    throw new Error('Intake not found');
+  }
+
+  // Snapshot intake into a new enrolled row
+  const sql = `
+    INSERT INTO oakton_enrolled (
+      intake_id, first_name, last_name, email, phone_number, program_name
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+
+  // Pick the first program of interest as the default program_name (supervisor can change later)
+  const programName = Array.isArray(intake.programs_of_interest) && intake.programs_of_interest.length
+    ? intake.programs_of_interest[0]
+    : null;
+
+  const { rows } = await pgPool.query(sql, [
+    intake.id,
+    intake.first_name,
+    intake.last_name,
+    intake.email,
+    intake.phone_number,
+    programName,
+  ]);
+  return rows[0];
+},
+
+async updateOaktonEnrolled(id, updates) {
+  // Allowed fields supervisors can edit (whitelist for security)
+  const allowedFields = [
+    'first_name', 'last_name', 'email', 'phone_number',
+    'program_name', 'program_status', 'program_year', 'term',
+    'start_date', 'end_date', 'continuing_student',
+    'first_attendance_verified', 'second_attendance_verified',
+    'follow_up_needed', 'follow_up_date', 'transition_to_work_date',
+    'permit_exam_date', 'certification_name', 'certification_status',
+    'exam_passed', 'assessment_notes', 'employability_skills_notes',
+    'employment_specialist', 'is_employed', 'date_of_hire',
+    'employment_verification_source', 'employer_name', 'employer_address',
+    'employer_city', 'employer_industry', 'hourly_wage', 'annual_wage',
+    'general_notes', 'is_archived',
+  ];
+
+  // Filter updates to only the allowed fields
+  const setClauses = [];
+  const values = [];
+  let paramIndex = 1;
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (allowedFields.includes(key)) {
+      setClauses.push(`${key} = $${paramIndex}`);
+      values.push(value);
+      paramIndex++;
+    }
+  }
+
+  if (setClauses.length === 0) {
+    throw new Error('No valid fields to update');
+  }
+
+  values.push(id);
+  const sql = `
+    UPDATE oakton_enrolled
+    SET ${setClauses.join(', ')}
+    WHERE id = $${paramIndex}
+    RETURNING *
+  `;
+
+  const { rows } = await pgPool.query(sql, values);
+  return rows[0];
+},
 };
