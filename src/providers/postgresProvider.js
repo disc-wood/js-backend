@@ -56,7 +56,6 @@ export default {
         date_of_birth, age_at_enrollment,
         ethnicity_race, ethnicity_race_other,
         current_city, zip_code,
-        age,
         knows_healthy_racial_identity,
         discussed_racial_identity,
         discussed_cultural_competence

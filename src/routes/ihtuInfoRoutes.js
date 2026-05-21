@@ -8,7 +8,6 @@ const router = express.Router();
 const REQUIRED_FIELDS = [
   'firstName', 'lastName', 'email', 'phoneNumber', 'gender',
   'dateOfBirth', 'ethnicityRace', 'currentCity', 'zipCode',
-  'age',
   'knowsHealthyRacialIdentity',
   'discussedRacialIdentity',
   'discussedCulturalCompetence',
