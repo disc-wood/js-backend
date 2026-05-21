@@ -22,7 +22,6 @@ const REQUIRED_FIELDS = [
   'howDidYouHear', 'intakeSessionDate',
 ];
 
-// Replace with the real Zoom link from Juleya
 const INTAKE_SESSION_ZOOM_LINK = 'https://oakton.zoom.us/j/INTAKE_LINK_PLACEHOLDER';
 
 function isEmpty(value) {
@@ -98,7 +97,6 @@ router.post('/upsertUser', async (req, res) => {
 });
 
 // === UPDATE INTAKE STATUS ===
-// PATCH /oaktonInfo/intakes/:id/status — supervisor changes status (Applied/Accepted/etc)
 router.patch('/intakes/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
@@ -114,13 +112,11 @@ router.patch('/intakes/:id/status', async (req, res) => {
       return res.status(404).json({ error: 'Intake not found' });
     }
 
-    // If accepted, automatically create an enrolled record
     if (status === 'Accepted') {
       try {
         await postgresProvider.createOaktonEnrolledFromIntake(id);
       } catch (err) {
         console.error('Failed to auto-create enrolled record:', err);
-        // Don't fail the status update if enrolled creation fails
       }
     }
 
@@ -142,7 +138,7 @@ router.get('/enrolled', async (_req, res) => {
   }
 });
 
-// === CREATE ENROLLED MANUALLY (in case admin wants to add without going through intake) ===
+// === CREATE ENROLLED MANUALLY ===
 router.post('/enrolled', async (req, res) => {
   try {
     const { intakeId } = req.body;
@@ -173,7 +169,9 @@ router.patch('/enrolled/:id', async (req, res) => {
     console.error('Failed to update enrolled record:', error);
     res.status(500).json({ error: error.message || 'Failed to update record' });
   }
-  // === TERM DATES ===
+});
+
+// === TERM DATES ===
 router.get('/term-dates', async (_req, res) => {
   try {
     const data = await postgresProvider.getAllTermDates();
@@ -207,7 +205,6 @@ router.delete('/term-dates/:id', async (req, res) => {
     console.error('Failed to delete term date:', error);
     res.status(500).json({ error: 'Failed to delete term date' });
   }
-});
 });
 
 export default router;
