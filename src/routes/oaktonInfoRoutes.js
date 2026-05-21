@@ -173,6 +173,41 @@ router.patch('/enrolled/:id', async (req, res) => {
     console.error('Failed to update enrolled record:', error);
     res.status(500).json({ error: error.message || 'Failed to update record' });
   }
+  // === TERM DATES ===
+router.get('/term-dates', async (_req, res) => {
+  try {
+    const data = await postgresProvider.getAllTermDates();
+    res.json(data);
+  } catch (error) {
+    console.error('Failed to fetch term dates:', error);
+    res.status(500).json({ error: 'Failed to fetch term dates' });
+  }
+});
+
+router.put('/term-dates', async (req, res) => {
+  try {
+    const { year, season, session, startDate, endDate } = req.body;
+    if (!year || !season || !startDate || !endDate) {
+      return res.status(400).json({ error: 'year, season, startDate, endDate are required' });
+    }
+    const data = await postgresProvider.upsertTermDate({ year, season, session, startDate, endDate });
+    res.json({ success: true, termDate: data });
+  } catch (error) {
+    console.error('Failed to upsert term date:', error);
+    res.status(500).json({ error: 'Failed to save term date' });
+  }
+});
+
+router.delete('/term-dates/:id', async (req, res) => {
+  try {
+    const deleted = await postgresProvider.deleteTermDate(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Term date not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete term date:', error);
+    res.status(500).json({ error: 'Failed to delete term date' });
+  }
+});
 });
 
 export default router;

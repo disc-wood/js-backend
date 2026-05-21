@@ -202,41 +202,53 @@ export default {
   },
 
   async createOaktonEnrolledFromIntake(intakeId) {
-    // Fetch the source intake row
-    const { rows: intakeRows } = await pgPool.query(
-      `SELECT * FROM oakton_intakes WHERE id = $1`,
-      [intakeId]
-    );
-    const intake = intakeRows[0];
-    if (!intake) throw new Error('Intake not found');
+  const { rows: intakeRows } = await pgPool.query(
+    `SELECT * FROM oakton_intakes WHERE id = $1`,
+    [intakeId]
+  );
+  const intake = intakeRows[0];
+  if (!intake) throw new Error('Intake not found');
 
-    const sql = `
-      INSERT INTO oakton_enrolled (
-        intake_id, first_name, last_name, email, phone_number, program_name,
-        racial_identity, term, program_year
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-    `;
-
-    // Pick the first program of interest as the default program_name (supervisor can change later)
-    const programName = Array.isArray(intake.programs_of_interest) && intake.programs_of_interest.length
-      ? intake.programs_of_interest[0]
-      : null;
-
-    const { rows } = await pgPool.query(sql, [
-      intake.id,
-      intake.first_name,
-      intake.last_name,
-      intake.email,
-      intake.phone_number,
-      programName,
-      intake.racial_identity,
-      intake.projected_starting_term_season,
+  // Look up matching term dates
+  const { rows: termRows } = await pgPool.query(
+    `SELECT * FROM term_dates
+     WHERE year = $1 AND season = $2
+     AND (session = $3 OR (session IS NULL AND $3 IS NULL))`,
+    [
       intake.projected_starting_term_year,
-    ]);
-    return rows[0];
-  },
+      intake.projected_starting_term_season,
+      intake.projected_starting_term_summer_session || null,
+    ]
+  );
+  const termDate = termRows[0] || null;
+
+  const programName = Array.isArray(intake.programs_of_interest) && intake.programs_of_interest.length
+    ? intake.programs_of_interest[0]
+    : null;
+
+  const sql = `
+    INSERT INTO oakton_enrolled (
+      intake_id, first_name, last_name, email, phone_number, program_name,
+      term, program_year, start_date, end_date
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+
+  const { rows } = await pgPool.query(sql, [
+    intake.id,
+    intake.first_name,
+    intake.last_name,
+    intake.email,
+    intake.phone_number,
+    programName,
+    intake.projected_starting_term_season,
+    intake.projected_starting_term_year,
+    termDate?.start_date || null,
+    termDate?.end_date || null,
+  ]);
+  return rows[0];
+},
 
   async updateOaktonEnrolled(id, updates) {
     // Allowed fields supervisors can edit (whitelist for security)
@@ -281,4 +293,33 @@ export default {
     const { rows } = await pgPool.query(sql, values);
     return rows[0];
   },
+  // === TERM DATES ===
+async getAllTermDates() {
+  const { rows } = await pgPool.query(
+    `SELECT * FROM term_dates ORDER BY year ASC, season ASC, session ASC`
+  );
+  return rows;
+},
+
+async upsertTermDate({ year, season, session, startDate, endDate }) {
+  const sql = `
+    INSERT INTO term_dates (year, season, session, start_date, end_date)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (year, season, session)
+    DO UPDATE SET start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date
+    RETURNING *
+  `;
+  const { rows } = await pgPool.query(sql, [
+    year, season, session || null, startDate, endDate,
+  ]);
+  return rows[0];
+},
+
+async deleteTermDate(id) {
+  const { rows } = await pgPool.query(
+    `DELETE FROM term_dates WHERE id = $1 RETURNING *`,
+    [id]
+  );
+  return rows[0];
+},
 };
