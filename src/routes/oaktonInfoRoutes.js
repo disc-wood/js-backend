@@ -113,12 +113,15 @@ router.patch('/intakes/:id/status', async (req, res) => {
     }
 
     if (status === 'Accepted') {
-      try {
-        await postgresProvider.createOaktonEnrolledFromIntake(id);
-      } catch (err) {
-        console.error('Failed to auto-create enrolled record:', err);
-      }
+  try {
+    const alreadyEnrolled = await postgresProvider.getOaktonEnrolledByIntakeId(id);
+    if (!alreadyEnrolled) {
+      await postgresProvider.createOaktonEnrolledFromIntake(id);
     }
+  } catch (err) {
+    console.error('Failed to auto-create enrolled record:', err);
+  }
+}
 
     res.json({ success: true, intake: updated });
   } catch (error) {

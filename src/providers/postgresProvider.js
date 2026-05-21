@@ -316,10 +316,19 @@ async upsertTermDate({ year, season, session, startDate, endDate }) {
 },
 
 async deleteTermDate(id) {
-  const { rows } = await pgPool.query(
-    `DELETE FROM term_dates WHERE id = $1 RETURNING *`,
-    [id]
-  );
-  return rows[0];
-},
+    const { rows } = await pgPool.query(
+      `DELETE FROM term_dates WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    return rows[0];
+  },
+
+  // ← ADD THIS inside the object, before the closing };
+  async getOaktonEnrolledByIntakeId(intakeId) {
+    const { rows } = await pgPool.query(
+      `SELECT id FROM oakton_enrolled WHERE intake_id = $1 LIMIT 1`,
+      [intakeId]
+    );
+    return rows[0] || null;
+  },
 };
