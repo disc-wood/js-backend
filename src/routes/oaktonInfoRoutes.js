@@ -7,7 +7,9 @@ const router = express.Router();
 const REQUIRED_FIELDS = [
   'firstName', 'lastName', 'email', 'phoneNumber', 'dateOfBirth',
   'racialIdentity', 'gender', 'cityZip',
-  'programsOfInterest', 'termOfInterest', 'projectedStartingTerm',
+  'programsOfInterest',
+  'termOfInterestYear', 'termOfInterestSeason',
+  'projectedStartingTermYear', 'projectedStartingTermSeason',
   'workAuthorization', 'employmentStatus',
   'annualIncome', 'householdSize',
   'programFormat', 'englishProficiency',
