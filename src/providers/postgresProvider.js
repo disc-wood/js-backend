@@ -49,49 +49,49 @@ export default {
     return rows;
   },
 
- async createIhtuIntake(payload) {
-  const sql = `
-    INSERT INTO ihtu_intakes (
-      first_name, last_name, email, phone_number, gender,
-      date_of_birth, age_at_enrollment,
-      ethnicity_race, ethnicity_race_other,
-      current_city, zip_code,
-      knows_healthy_racial_identity,
-      discussed_racial_identity,
-      discussed_cultural_competence
-    )
-    VALUES (
-      $1, $2, $3, $4, $5,
-      $6, $7,
-      $8, $9,
-      $10, $11,
-      $12,
-      $13,
-      $14
-    )
-    RETURNING *
-  `;
+  async createIhtuIntake(payload) {
+    const sql = `
+      INSERT INTO ihtu_intakes (
+        first_name, last_name, email, phone_number, gender,
+        date_of_birth, age_at_enrollment,
+        ethnicity_race, ethnicity_race_other,
+        current_city, zip_code,
+        knows_healthy_racial_identity,
+        discussed_racial_identity,
+        discussed_cultural_competence
+      )
+      VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7,
+        $8, $9,
+        $10, $11,
+        $12,
+        $13,
+        $14
+      )
+      RETURNING *
+    `;
 
-  const values = [
-    payload.firstName,
-    payload.lastName,
-    payload.email,
-    payload.phoneNumber,
-    payload.gender,
-    payload.dateOfBirth,
-    payload.ageAtEnrollment ?? null,
-    payload.ethnicityRace,
-    payload.ethnicityRaceOther || null,
-    payload.currentCity,
-    payload.zipCode,
-    payload.knowsHealthyRacialIdentity,
-    payload.discussedRacialIdentity,
-    payload.discussedCulturalCompetence,
-  ];
+    const values = [
+      payload.firstName,
+      payload.lastName,
+      payload.email,
+      payload.phoneNumber,
+      payload.gender,
+      payload.dateOfBirth,
+      payload.ageAtEnrollment ?? null,
+      payload.ethnicityRace,
+      payload.ethnicityRaceOther || null,
+      payload.currentCity,
+      payload.zipCode,
+      payload.knowsHealthyRacialIdentity,
+      payload.discussedRacialIdentity,
+      payload.discussedCulturalCompetence,
+    ];
 
-  const { rows } = await pgPool.query(sql, values);
-  return rows[0];
-},
+    const { rows } = await pgPool.query(sql, values);
+    return rows[0];
+  },
 
   // === OAKTON INTAKE ===
   async getAllOaktonIntakes() {
@@ -106,7 +106,8 @@ export default {
       INSERT INTO oakton_intakes (
         first_name, last_name, email, phone_number, date_of_birth, age_at_enrollment,
         racial_identity, gender, gender_other, city_zip, city_zip_other,
-        programs_of_interest, term_of_interest, projected_starting_term,
+        programs_of_interest,
+        projected_starting_term_year, projected_starting_term_season, projected_starting_term_summer_session,
         work_authorization, work_authorization_other, employment_status, weekly_work_hours,
         annual_income, household_size,
         program_format, program_format_other, english_proficiency, english_proficiency_other,
@@ -126,22 +127,23 @@ export default {
       VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
-        $12, $13, $14,
-        $15, $16, $17, $18,
-        $19, $20,
-        $21, $22, $23, $24,
-        $25, $26, $27,
-        $28, $29, $30,
-        $31, $32, $33, $34,
-        $35, $36,
-        $37, $38,
-        $39, $40,
-        $41, $42, $43,
-        $44, $45, $46,
-        $47, $48,
-        $49,
-        $50, $51, $52,
-        $53
+        $12,
+        $13, $14, $15,
+        $16, $17, $18, $19,
+        $20, $21,
+        $22, $23, $24, $25,
+        $26, $27, $28,
+        $29, $30, $31,
+        $32, $33, $34, $35,
+        $36, $37,
+        $38, $39,
+        $40, $41,
+        $42, $43, $44,
+        $45, $46, $47,
+        $48, $49,
+        $50,
+        $51, $52, $53,
+        $54
       )
       RETURNING *
     `;
@@ -151,7 +153,10 @@ export default {
       payload.dateOfBirth, payload.ageAtEnrollment ?? null,
       payload.racialIdentity, payload.gender, payload.genderOther || null,
       payload.cityZip, payload.cityZipOther || null,
-      payload.programsOfInterest || [], payload.termOfInterest, payload.projectedStartingTerm,
+      payload.programsOfInterest || [],
+      payload.projectedStartingTermYear || null,
+      payload.projectedStartingTermSeason || null,
+      payload.projectedStartingTermSummerSession || null,
       payload.workAuthorization, payload.workAuthorizationOther || null,
       payload.employmentStatus || [], payload.weeklyWorkHours || null,
       payload.annualIncome, payload.householdSize,
@@ -175,104 +180,105 @@ export default {
     const { rows } = await pgPool.query(sql, values);
     return rows[0];
   },
+
   // === OAKTON INTAKE STATUS ===
-async updateOaktonIntakeStatus(id, status) {
-  const sql = `
-    UPDATE oakton_intakes
-    SET status = $1
-    WHERE id = $2
-    RETURNING *
-  `;
-  const { rows } = await pgPool.query(sql, [status, id]);
-  return rows[0];
-},
+  async updateOaktonIntakeStatus(id, status) {
+    const sql = `
+      UPDATE oakton_intakes
+      SET status = $1
+      WHERE id = $2
+      RETURNING *
+    `;
+    const { rows } = await pgPool.query(sql, [status, id]);
+    return rows[0];
+  },
 
-// === OAKTON ENROLLED ===
-async getAllOaktonEnrolled() {
-  const { rows } = await pgPool.query(
-    `SELECT * FROM oakton_enrolled WHERE is_archived = FALSE ORDER BY enrolled_at DESC`
-  );
-  return rows;
-},
+  // === OAKTON ENROLLED ===
+  async getAllOaktonEnrolled() {
+    const { rows } = await pgPool.query(
+      `SELECT * FROM oakton_enrolled WHERE is_archived = FALSE ORDER BY enrolled_at DESC`
+    );
+    return rows;
+  },
 
-async createOaktonEnrolledFromIntake(intakeId) {
-  // Fetch the source intake row
-  const { rows: intakeRows } = await pgPool.query(
-    `SELECT * FROM oakton_intakes WHERE id = $1`,
-    [intakeId]
-  );
-  const intake = intakeRows[0];
-  if (!intake) {
-    throw new Error('Intake not found');
-  }
+  async createOaktonEnrolledFromIntake(intakeId) {
+    // Fetch the source intake row
+    const { rows: intakeRows } = await pgPool.query(
+      `SELECT * FROM oakton_intakes WHERE id = $1`,
+      [intakeId]
+    );
+    const intake = intakeRows[0];
+    if (!intake) throw new Error('Intake not found');
 
-  // Snapshot intake into a new enrolled row
-  const sql = `
-    INSERT INTO oakton_enrolled (
-      intake_id, first_name, last_name, email, phone_number, program_name
-    )
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING *
-  `;
+    const sql = `
+      INSERT INTO oakton_enrolled (
+        intake_id, first_name, last_name, email, phone_number, program_name,
+        racial_identity, term, program_year
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
 
-  // Pick the first program of interest as the default program_name (supervisor can change later)
-  const programName = Array.isArray(intake.programs_of_interest) && intake.programs_of_interest.length
-    ? intake.programs_of_interest[0]
-    : null;
+    // Pick the first program of interest as the default program_name (supervisor can change later)
+    const programName = Array.isArray(intake.programs_of_interest) && intake.programs_of_interest.length
+      ? intake.programs_of_interest[0]
+      : null;
 
-  const { rows } = await pgPool.query(sql, [
-    intake.id,
-    intake.first_name,
-    intake.last_name,
-    intake.email,
-    intake.phone_number,
-    programName,
-  ]);
-  return rows[0];
-},
+    const { rows } = await pgPool.query(sql, [
+      intake.id,
+      intake.first_name,
+      intake.last_name,
+      intake.email,
+      intake.phone_number,
+      programName,
+      intake.racial_identity,
+      intake.projected_starting_term_season,
+      intake.projected_starting_term_year,
+    ]);
+    return rows[0];
+  },
 
-async updateOaktonEnrolled(id, updates) {
-  // Allowed fields supervisors can edit (whitelist for security)
-  const allowedFields = [
-    'first_name', 'last_name', 'email', 'phone_number',
-    'program_name', 'program_status', 'program_year', 'term',
-    'start_date', 'end_date', 'continuing_student',
-    'first_attendance_verified', 'second_attendance_verified',
-    'follow_up_needed', 'follow_up_date', 'transition_to_work_date',
-    'permit_exam_date', 'certification_name', 'certification_status',
-    'exam_passed', 'assessment_notes', 'employability_skills_notes',
-    'employment_specialist', 'is_employed', 'date_of_hire',
-    'employment_verification_source', 'employer_name', 'employer_address',
-    'employer_city', 'employer_industry', 'hourly_wage', 'annual_wage',
-    'general_notes', 'is_archived',
-  ];
+  async updateOaktonEnrolled(id, updates) {
+    // Allowed fields supervisors can edit (whitelist for security)
+    const allowedFields = [
+      'first_name', 'last_name', 'email', 'phone_number',
+      'program_name', 'program_status', 'program_year', 'term',
+      'start_date', 'end_date', 'continuing_student',
+      'first_attendance_verified', 'second_attendance_verified',
+      'follow_up_needed', 'follow_up_date', 'transition_to_work_date',
+      'permit_exam_date', 'certification_name', 'certification_status',
+      'exam_passed', 'assessment_notes', 'employability_skills_notes',
+      'employment_specialist', 'is_employed', 'date_of_hire',
+      'employment_verification_source', 'employer_name', 'employer_address',
+      'employer_city', 'employer_industry', 'hourly_wage', 'annual_wage',
+      'general_notes', 'is_archived',
+    ];
 
-  // Filter updates to only the allowed fields
-  const setClauses = [];
-  const values = [];
-  let paramIndex = 1;
+    const setClauses = [];
+    const values = [];
+    let paramIndex = 1;
 
-  for (const [key, value] of Object.entries(updates)) {
-    if (allowedFields.includes(key)) {
-      setClauses.push(`${key} = $${paramIndex}`);
-      values.push(value);
-      paramIndex++;
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedFields.includes(key)) {
+        setClauses.push(`${key} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
     }
-  }
 
-  if (setClauses.length === 0) {
-    throw new Error('No valid fields to update');
-  }
+    if (setClauses.length === 0) {
+      throw new Error('No valid fields to update');
+    }
 
-  values.push(id);
-  const sql = `
-    UPDATE oakton_enrolled
-    SET ${setClauses.join(', ')}
-    WHERE id = $${paramIndex}
-    RETURNING *
-  `;
+    values.push(id);
+    const sql = `
+      UPDATE oakton_enrolled
+      SET ${setClauses.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
 
-  const { rows } = await pgPool.query(sql, values);
-  return rows[0];
-},
+    const { rows } = await pgPool.query(sql, values);
+    return rows[0];
+  },
 };
