@@ -22,6 +22,9 @@ const REQUIRED_FIELDS = [
   'howDidYouHear', 'intakeSessionDate',
 ];
 
+// Replace with the real Zoom link from Juleya
+const INTAKE_SESSION_ZOOM_LINK = 'https://oakton.zoom.us/j/INTAKE_LINK_PLACEHOLDER';
+
 function isEmpty(value) {
   if (value === undefined || value === null) return true;
   if (typeof value === 'string' && value.trim() === '') return true;
@@ -54,8 +57,14 @@ router.post('/intakes', async (req, res) => {
       subject: 'Your Oakton WEI Application Has Been Received',
       html: `
         <p>Hi ${req.body.firstName},</p>
-        <p>Thank you for submitting your <strong>Oakton Workforce Empowerment Initiative</strong> application. We've received your information and will be in touch soon.</p>
-        <p>If you have any questions, please email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+        <p>We've received your application for the <strong>Oakton Workforce Empowerment Initiative</strong>. Someone from our team will be in contact with you soon.</p>
+        <p>A few things to keep in mind:</p>
+        <ul>
+          <li>Please make note of the intake session date you selected: <strong>${req.body.intakeSessionDate}</strong>.</li>
+          <li>Your intake session Zoom link: <a href="${INTAKE_SESSION_ZOOM_LINK}">${INTAKE_SESSION_ZOOM_LINK}</a></li>
+          <li>Make sure you submit your supporting documents before the session.</li>
+        </ul>
+        <p>Questions? Email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
         <p>— The Oakton WEI Team</p>
       `,
     }).catch((err) => console.error('Oakton confirmation email failed:', err));
