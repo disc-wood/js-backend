@@ -114,15 +114,28 @@ router.patch('/intakes/:id/status', async (req, res) => {
     }
 
     if (status === 'Accepted') {
-  try {
-    const alreadyEnrolled = await postgresProvider.getOaktonEnrolledByIntakeId(id);
-    if (!alreadyEnrolled) {
-      await postgresProvider.createOaktonEnrolledFromIntake(id);
+      try {
+        const alreadyEnrolled = await postgresProvider.getOaktonEnrolledByIntakeId(id);
+        if (!alreadyEnrolled) {
+          await postgresProvider.createOaktonEnrolledFromIntake(id);
+        }
+      } catch (err) {
+        console.error('Failed to auto-create enrolled record:', err);
+      }
+
+      transporter.sendMail({
+        from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
+        to: updated.email,
+        subject: "Congratulations — You've Been Selected for the WEI Grant",
+        html: `
+          <p>Hi ${updated.first_name},</p>
+          <p>We're excited to let you know that you've been <strong>selected to receive the Workforce Empowerment Initiative (WEI) grant</strong>!</p>
+          <p>Someone from our team will be reaching out soon with next steps. In the meantime, if you have any questions, feel free to contact us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+          <p>We look forward to supporting you on your journey.</p>
+          <p>— The Oakton WEI Team</p>
+        `,
+      }).catch((err) => console.error('Acceptance email failed:', err));
     }
-  } catch (err) {
-    console.error('Failed to auto-create enrolled record:', err);
-  }
-}
 
     res.json({ success: true, intake: updated });
   } catch (error) {
