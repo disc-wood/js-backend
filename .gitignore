@@ -1,5 +1,6 @@
 .DS_STORE
 .env
-functions/.env 
+functions/.env
 *.ini
 node_modules/
+setAdmin.mjs

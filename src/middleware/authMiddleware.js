@@ -1,5 +1,4 @@
 import admin from '../config/firebase.js';
-import postgresProvider from '../providers/postgresProvider.js';
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -14,12 +13,11 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const decoded = await admin.auth().verifyIdToken(token);
-    const dbUser = await postgresProvider.findByUid(decoded.uid);
 
     req.user = {
       uid: decoded.uid,
       email: decoded.email,
-      role: dbUser?.role || null,
+      role: decoded.role || null,
     };
 
     next();
