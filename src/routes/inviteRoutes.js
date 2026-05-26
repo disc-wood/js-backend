@@ -1,6 +1,8 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import transporter from '../config/mailer.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import requireAdmin from '../middleware/requireAdmin.js';
 
 const router = express.Router();
 
@@ -9,8 +11,8 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// Generate invite and send email automatically
-router.post('/generate', async (req, res) => {
+// Admin only — generate invite and send email
+router.post('/generate', authMiddleware, requireAdmin, async (req, res) => {
   const supabase = getSupabase();
   const { email, programId } = req.body;
 
@@ -51,6 +53,7 @@ router.post('/generate', async (req, res) => {
   return res.json({ success: true });
 });
 
+// Public — invited user validates their token before logging in / signing up
 router.get('/validate', async (req, res) => {
   const supabase = getSupabase();
   const { token } = req.query;
@@ -74,6 +77,7 @@ router.get('/validate', async (req, res) => {
   return res.json({ success: true, programId: data.program_id });
 });
 
+// Public — called right after the invited user creates their account; this is what assigns their role
 router.post('/accept', async (req, res) => {
   const supabase = getSupabase();
   const { token, uid } = req.body;
@@ -104,7 +108,8 @@ router.post('/accept', async (req, res) => {
   return res.json({ success: true });
 });
 
-router.get('/list', async (req, res) => {
+// Admin only — list all invitations
+router.get('/list', authMiddleware, requireAdmin, async (_req, res) => {
   const supabase = getSupabase();
 
   const { data, error } = await supabase
@@ -116,7 +121,8 @@ router.get('/list', async (req, res) => {
   return res.json({ invitations: data });
 });
 
-router.get('/active', async (req, res) => {
+// Admin only — list all active supervisors
+router.get('/active', authMiddleware, requireAdmin, async (_req, res) => {
   const supabase = getSupabase();
 
   const { data, error } = await supabase
@@ -140,7 +146,8 @@ router.get('/active', async (req, res) => {
   return res.json({ supervisors: enriched });
 });
 
-router.delete('/revoke', async (req, res) => {
+// Admin only — revoke a supervisor's access
+router.delete('/revoke', authMiddleware, requireAdmin, async (req, res) => {
   const supabase = getSupabase();
   const { userId, programId } = req.body;
 
@@ -169,7 +176,8 @@ router.delete('/revoke', async (req, res) => {
   return res.json({ success: true });
 });
 
-router.delete('/cancel/:token', async (req, res) => {
+// Admin only — cancel a pending invite
+router.delete('/cancel/:token', authMiddleware, requireAdmin, async (req, res) => {
   const supabase = getSupabase();
   const { token } = req.params;
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import postgresProvider from '../providers/postgresProvider.js';
 import transporter from '../config/mailer.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ function isEmpty(value) {
 }
 
 // GET all IHTU intakes (for Database page)
-router.get('/intakes', async (_req, res) => {
+router.get('/intakes', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getAllIhtuIntakes();
     res.json(data);

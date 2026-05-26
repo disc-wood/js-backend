@@ -1,6 +1,7 @@
 import express from 'express';
 import postgresProvider from '../providers/postgresProvider.js';
 import transporter from '../config/mailer.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ function isEmpty(value) {
   return false;
 }
 
-router.get('/intakes', async (_req, res) => {
+router.get('/intakes', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getAllOaktonIntakes();
     res.json(data);
@@ -42,6 +43,7 @@ router.get('/intakes', async (_req, res) => {
   }
 });
 
+// PUBLIC — unauthenticated applicants submit this
 router.post('/intakes', async (req, res) => {
   try {
     const missing = REQUIRED_FIELDS.filter((key) => isEmpty(req.body?.[key]));
@@ -76,7 +78,7 @@ router.post('/intakes', async (req, res) => {
   }
 });
 
-router.get('/getAll', async (_req, res) => {
+router.get('/getAll', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getAll();
     res.json(data);
@@ -86,7 +88,7 @@ router.get('/getAll', async (_req, res) => {
   }
 });
 
-router.post('/upsertUser', async (req, res) => {
+router.post('/upsertUser', authMiddleware, async (req, res) => {
   try {
     const { firstname, lastname, email, age } = req.body;
     const data = await postgresProvider.upsertUser({ firstname, lastname, email, age });
@@ -98,7 +100,7 @@ router.post('/upsertUser', async (req, res) => {
 });
 
 // === UPDATE INTAKE STATUS ===
-router.patch('/intakes/:id/status', async (req, res) => {
+router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -145,7 +147,7 @@ router.patch('/intakes/:id/status', async (req, res) => {
 });
 
 // === GET ENROLLED STUDENTS ===
-router.get('/enrolled', async (_req, res) => {
+router.get('/enrolled', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getAllOaktonEnrolled();
     res.json(data);
@@ -156,7 +158,7 @@ router.get('/enrolled', async (_req, res) => {
 });
 
 // === CREATE ENROLLED MANUALLY ===
-router.post('/enrolled', async (req, res) => {
+router.post('/enrolled', authMiddleware, async (req, res) => {
   try {
     const { intakeId } = req.body;
     if (!intakeId) {
@@ -172,7 +174,7 @@ router.post('/enrolled', async (req, res) => {
 });
 
 // === UPDATE ENROLLED STUDENT FIELDS ===
-router.patch('/enrolled/:id', async (req, res) => {
+router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const updated = await postgresProvider.updateOaktonEnrolled(id, req.body);
@@ -189,7 +191,7 @@ router.patch('/enrolled/:id', async (req, res) => {
 });
 
 // === TERM DATES ===
-router.get('/term-dates', async (_req, res) => {
+router.get('/term-dates', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getAllTermDates();
     res.json(data);
@@ -199,7 +201,7 @@ router.get('/term-dates', async (_req, res) => {
   }
 });
 
-router.get('/term-dates/current', async (_req, res) => {
+router.get('/term-dates/current', authMiddleware, async (_req, res) => {
   try {
     const data = await postgresProvider.getCurrentTermDate();
     res.json(data);
@@ -209,7 +211,7 @@ router.get('/term-dates/current', async (_req, res) => {
   }
 });
 
-router.put('/term-dates', async (req, res) => {
+router.put('/term-dates', authMiddleware, async (req, res) => {
   try {
     const { year, season, session, startDate, endDate } = req.body;
     if (!year || !season || !startDate || !endDate) {
@@ -223,7 +225,7 @@ router.put('/term-dates', async (req, res) => {
   }
 });
 
-router.delete('/term-dates/:id', async (req, res) => {
+router.delete('/term-dates/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await postgresProvider.deleteTermDate(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Term date not found' });

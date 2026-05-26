@@ -1,4 +1,5 @@
 import admin from '../config/firebase.js';
+import postgresProvider from '../providers/postgresProvider.js';
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -12,21 +13,28 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'No Firebase ID token provided' });
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decoded = await admin.auth().verifyIdToken(token);
+    const dbUser = await postgresProvider.findByUid(decoded.uid);
 
-    req.user = decodedToken;
+    if (!dbUser) {
+      return res.status(403).json({ error: 'User not found' });
+    }
+
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email,
+      role: dbUser.role || null,
+    };
+
     next();
   } catch (error) {
-    console.error('Firebase Auth middleware error:', error);
     if (error.code === 'auth/id-token-expired') {
       return res.status(401).json({ error: 'Firebase ID token expired' });
     }
     if (error.code === 'auth/invalid-id-token') {
       return res.status(401).json({ error: 'Invalid Firebase ID token' });
     }
-    res
-      .status(500)
-      .json({ error: 'Internal server error during authentication' });
+    res.status(401).json({ error: 'Authentication failed' });
   }
 };
 

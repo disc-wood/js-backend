@@ -24,7 +24,7 @@ export default {
 
   async findByUid(uid) {
     const sql = `
-      SELECT id, firebase_uid AS "firebaseUid", email
+      SELECT id, firebase_uid AS "firebaseUid", email, role
       FROM users
       WHERE firebase_uid = $1
     `;
