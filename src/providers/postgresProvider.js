@@ -1,46 +1,6 @@
 import { pgPool } from '../config/database.js';
 
 export default {
-  async createUser({ uid, email }) {
-    const sql = `
-      INSERT INTO users (firebase_uid, email)
-      VALUES ($1, $2)
-      RETURNING id
-    `;
-    const { rows } = await pgPool.query(sql, [uid, email]);
-    return { id: rows[0].id, uid, email };
-  },
-
-  async upsertUser({ uid, email }) {
-    const sql = `
-      INSERT INTO users (firebase_uid, email)
-      VALUES ($1, $2)
-      ON CONFLICT (firebase_uid)
-      DO UPDATE SET email = EXCLUDED.email
-    `;
-    await pgPool.query(sql, [uid, email]);
-    return this.findByUid(uid);
-  },
-
-  async findByUid(uid) {
-    const sql = `
-      SELECT id, firebase_uid AS "firebaseUid", email, role
-      FROM users
-      WHERE firebase_uid = $1
-    `;
-    const { rows } = await pgPool.query(sql, [uid]);
-    return rows[0] || null;
-  },
-
-  async getAll() {
-    const { rows } = await pgPool.query(`
-      SELECT firebase_uid AS "firebaseUid", email
-      FROM users
-      ORDER BY email ASC
-    `);
-    return rows;
-  },
-
   // === IHTU INTAKE ===
   async getAllIhtuIntakes() {
     const { rows } = await pgPool.query(

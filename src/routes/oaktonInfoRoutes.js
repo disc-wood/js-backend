@@ -78,26 +78,6 @@ router.post('/intakes', async (req, res) => {
   }
 });
 
-router.get('/getAll', authMiddleware, async (_req, res) => {
-  try {
-    const data = await postgresProvider.getAll();
-    res.json(data);
-  } catch (error) {
-    console.error('Failed to fetch all:', error);
-    res.status(500).json({ error: 'Failed to fetch data' });
-  }
-});
-
-router.post('/upsertUser', authMiddleware, async (req, res) => {
-  try {
-    const { firstname, lastname, email, age } = req.body;
-    const data = await postgresProvider.upsertUser({ firstname, lastname, email, age });
-    res.json(data);
-  } catch (error) {
-    console.error('Failed to upsert user:', error);
-    res.status(500).json({ error: 'Failed to fetch data' });
-  }
-});
 
 // === UPDATE INTAKE STATUS ===
 router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
