@@ -16,14 +16,10 @@ const authMiddleware = async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(token);
     const dbUser = await postgresProvider.findByUid(decoded.uid);
 
-    if (!dbUser) {
-      return res.status(403).json({ error: 'User not found' });
-    }
-
     req.user = {
       uid: decoded.uid,
       email: decoded.email,
-      role: dbUser.role || null,
+      role: dbUser?.role || null,
     };
 
     next();
