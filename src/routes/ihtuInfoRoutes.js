@@ -1,7 +1,11 @@
 import express from 'express';
+import { createClient } from '@supabase/supabase-js';
 import postgresProvider from '../providers/postgresProvider.js';
 import transporter from '../config/mailer.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+
+const getSupabase = () =>
+  createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const router = express.Router();
 
@@ -44,7 +48,26 @@ router.post('/intakes', async (req, res) => {
       });
     }
 
-    const created = await postgresProvider.createIhtuIntake(req.body);
+    // Check if custom question is active; if so, require an answer
+    const supabase = getSupabase();
+    const { data: customQ } = await supabase
+      .from('custom_questions')
+      .select('question_text, is_active')
+      .eq('program_id', 'ihtu')
+      .maybeSingle();
+
+    if (customQ?.is_active && customQ?.question_text && isEmpty(req.body?.customAnswer)) {
+      return res.status(400).json({ error: 'Missing required fields', missing: ['customAnswer'] });
+    }
+
+    // Snapshot the current question text server-side
+    const customQuestionSnapshot =
+      customQ?.is_active && customQ?.question_text ? customQ.question_text : null;
+
+    const created = await postgresProvider.createIhtuIntake({
+      ...req.body,
+      customQuestion: customQuestionSnapshot,
+    });
 
     // Send confirmation email (non-blocking)
     transporter

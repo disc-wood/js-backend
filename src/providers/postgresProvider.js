@@ -18,7 +18,8 @@ export default {
         current_city, zip_code,
         knows_healthy_racial_identity,
         discussed_racial_identity,
-        discussed_cultural_competence
+        discussed_cultural_competence,
+        custom_question, custom_answer
       )
       VALUES (
         $1, $2, $3, $4, $5,
@@ -27,7 +28,8 @@ export default {
         $10, $11,
         $12,
         $13,
-        $14
+        $14,
+        $15, $16
       )
       RETURNING *
     `;
@@ -47,6 +49,8 @@ export default {
       payload.knowsHealthyRacialIdentity,
       payload.discussedRacialIdentity,
       payload.discussedCulturalCompetence,
+      payload.customQuestion || null,
+      payload.customAnswer || null,
     ];
 
     const { rows } = await pgPool.query(sql, values);
@@ -82,7 +86,8 @@ export default {
         needs_accommodations, accommodations_explanation,
         agrees_to_terms,
         other_comments, how_did_you_hear, how_did_you_hear_other,
-        intake_session_date
+        intake_session_date,
+        custom_question, custom_answer
       )
       VALUES (
         $1, $2, $3, $4, $5, $6,
@@ -103,7 +108,8 @@ export default {
         $48, $49,
         $50,
         $51, $52, $53,
-        $54
+        $54,
+        $55, $56
       )
       RETURNING *
     `;
@@ -134,7 +140,9 @@ export default {
       payload.needsAccommodations, payload.accommodationsExplanation || null,
       payload.agreesToTerms,
       payload.otherComments || null, payload.howDidYouHear, payload.howDidYouHearOther || null,
-      payload.intakeSessionDate,
+      payload.intakeSessionDate || null,
+      payload.customQuestion || null,
+      payload.customAnswer || null,
     ];
 
     const { rows } = await pgPool.query(sql, values);

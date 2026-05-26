@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import authRoutes from './routes/authRoutes.js';
+import customQuestionRoutes from './routes/customQuestionRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
 import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
 import inviteRoutes from './routes/inviteRoutes.js';
@@ -53,6 +54,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/customQuestions', customQuestionRoutes);
 app.use('/oaktonInfo', oaktonInfoRoutes);
 app.use('/ihtuInfo', ihtuInfoRoutes);
 app.use('/invite', inviteRoutes);
