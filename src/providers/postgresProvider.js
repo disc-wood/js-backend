@@ -270,17 +270,25 @@ async getAllTermDates() {
 },
 
 async upsertTermDate({ year, season, session, startDate, endDate }) {
-  const sql = `
-    INSERT INTO term_dates (year, season, session, start_date, end_date)
-    VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (year, season, session)
-    DO UPDATE SET start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date
-    RETURNING *
-  `;
-  const { rows } = await pgPool.query(sql, [
-    year, season, session || null, startDate, endDate,
-  ]);
-  return rows[0];
+  const sessionVal = session || null;
+  // ON CONFLICT doesn't work with nullable session (NULL != NULL in unique constraints),
+  // so do UPDATE first, then INSERT if no row matched.
+  const { rows: updated } = await pgPool.query(
+    `UPDATE term_dates
+     SET start_date = $4, end_date = $5
+     WHERE year = $1 AND season = $2
+       AND (session = $3 OR (session IS NULL AND $3 IS NULL))
+     RETURNING *`,
+    [year, season, sessionVal, startDate, endDate],
+  );
+  if (updated.length > 0) return updated[0];
+
+  const { rows: inserted } = await pgPool.query(
+    `INSERT INTO term_dates (year, season, session, start_date, end_date)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [year, season, sessionVal, startDate, endDate],
+  );
+  return inserted[0];
 },
 
 async deleteTermDate(id) {
