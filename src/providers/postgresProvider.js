@@ -299,6 +299,20 @@ async deleteTermDate(id) {
     return rows[0];
   },
 
+async backfillEnrolledTermDates({ year, season, startDate, endDate }) {
+  // Update existing enrolled records that match this term but have no dates yet
+  const { rows } = await pgPool.query(
+    `UPDATE oakton_enrolled
+     SET start_date = $3, end_date = $4
+     WHERE (program_year::text = $1::text)
+       AND term = $2
+       AND is_archived = FALSE
+     RETURNING id`,
+    [year, season, startDate, endDate],
+  );
+  return rows;
+},
+
   // ← ADD THIS inside the object, before the closing };
   async getOaktonEnrolledByIntakeId(intakeId) {
     const { rows } = await pgPool.query(

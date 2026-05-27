@@ -234,6 +234,8 @@ router.put('/term-dates', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'year, season, startDate, endDate are required' });
     }
     const data = await postgresProvider.upsertTermDate({ year, season, session, startDate, endDate });
+    // Backfill enrolled records that matched this term but had no dates
+    await postgresProvider.backfillEnrolledTermDates({ year, season, startDate, endDate });
     res.json({ success: true, termDate: data });
   } catch (error) {
     console.error('Failed to upsert term date:', error);
