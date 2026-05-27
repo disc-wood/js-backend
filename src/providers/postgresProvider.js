@@ -231,7 +231,7 @@ export default {
       'employment_specialist', 'is_employed', 'date_of_hire',
       'employment_verification_source', 'employer_name', 'employer_address',
       'employer_city', 'employer_industry', 'hourly_wage', 'annual_wage',
-      'general_notes', 'is_archived',
+      'general_notes', 'program_completed', 'is_archived',
     ];
 
     const setClauses = [];
