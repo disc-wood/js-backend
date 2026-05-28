@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgresProvider from '../providers/postgresProvider.js';
 import transporter from '../config/mailer.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import { getTemplate, renderTemplate } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -29,7 +30,6 @@ const REQUIRED_FIELDS = [
   'howDidYouHear',
 ];
 
-const INTAKE_SESSION_ZOOM_LINK = 'https://oakton.zoom.us/j/INTAKE_LINK_PLACEHOLDER';
 
 function isEmpty(value) {
   if (value === undefined || value === null) return true;
@@ -91,22 +91,16 @@ router.post('/intakes', async (req, res) => {
     });
 
     try {
+      const tmpl = await getTemplate('oakton-application-received');
+      const html = tmpl
+        ? renderTemplate(tmpl.body, { first_name: req.body.firstName })
+        : `<p>Hi ${req.body.firstName},</p><p>We've received your application. Someone will be in touch soon.</p>`;
+      const subject = tmpl?.subject || 'Your Oakton WEI Application Has Been Received';
       await transporter.sendMail({
         from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
         to: req.body.email,
-        subject: 'Your Oakton WEI Application Has Been Received',
-        html: `
-          <p>Hi ${req.body.firstName},</p>
-          <p>We've received your application for the <strong>Oakton Workforce Empowerment Initiative</strong>. Someone from our team will be in contact with you soon.</p>
-          <p>A few things to keep in mind:</p>
-          <ul>
-            ${req.body.intakeSessionDate ? `<li>Please make note of the intake session date you selected: <strong>${req.body.intakeSessionDate}</strong>.</li>` : ''}
-            <li>Your intake session Zoom link: <a href="${INTAKE_SESSION_ZOOM_LINK}">${INTAKE_SESSION_ZOOM_LINK}</a></li>
-            <li>Make sure you submit your supporting documents before the session.</li>
-          </ul>
-          <p>Questions? Email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
-          <p>— The Oakton WEI Team</p>
-        `,
+        subject,
+        html,
       });
     } catch (emailErr) {
       console.error('Oakton confirmation email failed:', emailErr);
@@ -147,17 +141,15 @@ router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
       }
 
       try {
+        const tmpl = await getTemplate('oakton-accepted');
+        const html = tmpl
+          ? renderTemplate(tmpl.body, { first_name: updated.first_name })
+          : `<p>Hi ${updated.first_name},</p><p>Congratulations — you've been selected for the WEI grant!</p>`;
         await transporter.sendMail({
           from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
           to: updated.email,
-          subject: "Congratulations — You've Been Selected for the WEI Grant",
-          html: `
-            <p>Hi ${updated.first_name},</p>
-            <p>We're excited to let you know that you've been <strong>selected to receive the Workforce Empowerment Initiative (WEI) grant</strong>!</p>
-            <p>Someone from our team will be reaching out soon with next steps. In the meantime, if you have any questions, feel free to contact us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
-            <p>We look forward to supporting you on your journey.</p>
-            <p>— The Oakton WEI Team</p>
-          `,
+          subject: tmpl?.subject || "Congratulations — You've Been Selected for the WEI Grant",
+          html,
         });
       } catch (emailErr) {
         console.error('Acceptance email failed:', emailErr.message);
@@ -210,17 +202,15 @@ router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
 
     if (req.body.program_completed === true && updated.email) {
       try {
+        const tmpl = await getTemplate('oakton-program-completed');
+        const html = tmpl
+          ? renderTemplate(tmpl.body, { first_name: updated.first_name, program_name: updated.program_name || '' })
+          : `<p>Hi ${updated.first_name},</p><p>Congratulations on completing your program!</p>`;
         await transporter.sendMail({
           from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
           to: updated.email,
-          subject: "Congratulations on Completing Your Program!",
-          html: `
-            <p>Hi ${updated.first_name},</p>
-            <p>Congratulations on completing${updated.program_name ? ` the <strong>${updated.program_name}</strong> program` : ' your program'} with the <strong>Workforce Empowerment Initiative</strong>! This is a huge accomplishment and we are so proud of everything you've achieved.</p>
-            <p>We wish you all the best in your next steps. If you ever need support or want to stay connected, don't hesitate to reach out to us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
-            <p>We look forward to hearing about your continued success.</p>
-            <p>— The Oakton WEI Team</p>
-          `,
+          subject: tmpl?.subject || 'Congratulations on Completing Your Program!',
+          html,
         });
       } catch (emailErr) {
         console.error('Program completion email failed:', emailErr.message);

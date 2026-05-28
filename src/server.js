@@ -6,6 +6,7 @@ import express from 'express';
 import './jobs/midtermEmail.js';
 import { sendMidtermEmails } from './jobs/midtermEmail.js';
 import authRoutes from './routes/authRoutes.js';
+import emailTemplateRoutes from './routes/emailTemplateRoutes.js';
 import customQuestionRoutes from './routes/customQuestionRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
 import oaktonInfoRoutes from './routes/oaktonInfoRoutes.js';
@@ -56,6 +57,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/emailTemplates', emailTemplateRoutes);
 app.use('/customQuestions', customQuestionRoutes);
 app.use('/oaktonInfo', oaktonInfoRoutes);
 app.use('/ihtuInfo', ihtuInfoRoutes);
@@ -66,8 +68,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// TEMP: manual trigger for testing midterm email job
-app.post('/test/midterm-email', async (_req, res) => {
+// Cron trigger for midterm email job — Vercel sends Authorization: Bearer <CRON_SECRET>
+app.post('/cron/midterm-email', async (req, res) => {
+  if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   await sendMidtermEmails();
   res.json({ success: true });
 });

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgresProvider from '../providers/postgresProvider.js';
 import transporter from '../config/mailer.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import { getTemplate, renderTemplate } from '../utils/emailTemplates.js';
 
 const getSupabase = () =>
   createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -70,15 +71,15 @@ router.post('/intakes', async (req, res) => {
     });
 
     try {
+      const tmpl = await getTemplate('ihtu-application-received');
+      const html = tmpl
+        ? renderTemplate(tmpl.body, { first_name: req.body.firstName })
+        : `<p>Hi ${req.body.firstName},</p><p>Thank you for submitting your application. We'll be in touch soon.</p>`;
       await transporter.sendMail({
         from: `"I Hope They Understand" <${process.env.GMAIL_USER}>`,
         to: req.body.email,
-        subject: 'Your IHTU Application Has Been Received',
-        html: `
-          <p>Hi ${req.body.firstName},</p>
-          <p>Thank you for submitting your <strong>I Hope They Understand</strong> application. We've received your information and will be in touch soon.</p>
-          <p>— The IHTU Team</p>
-        `,
+        subject: tmpl?.subject || 'Your IHTU Application Has Been Received',
+        html,
       });
     } catch (emailErr) {
       console.error('IHTU confirmation email failed:', emailErr);
