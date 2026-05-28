@@ -164,7 +164,7 @@ export default {
   // === OAKTON ENROLLED ===
   async getAllOaktonEnrolled() {
     const { rows } = await pgPool.query(
-      `SELECT oe.*, oi.racial_identity
+      `SELECT oe.*, oi.racial_identity, oi.city_zip, oi.age_at_enrollment
        FROM oakton_enrolled oe
        LEFT JOIN oakton_intakes oi ON oi.id = oe.intake_id
        WHERE oe.is_archived = FALSE
