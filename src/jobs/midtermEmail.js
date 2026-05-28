@@ -59,8 +59,8 @@ async function sendMidtermEmails() {
   }
 }
 
-// Runs at 1:39 AM Central Time every day
-cron.schedule('39 1 * * *', sendMidtermEmails, { timezone: 'America/Chicago' });
+// Runs at 1:47 AM Central Time every day
+cron.schedule('47 1 * * *', sendMidtermEmails, { timezone: 'America/Chicago' });
 
 console.log('Midterm email job scheduled (1:39 AM Central)');
 

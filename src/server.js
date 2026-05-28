@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import './jobs/midtermEmail.js';
+import { sendMidtermEmails } from './jobs/midtermEmail.js';
 import authRoutes from './routes/authRoutes.js';
 import customQuestionRoutes from './routes/customQuestionRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
@@ -63,6 +64,12 @@ app.use('/users', usersRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// TEMP: manual trigger for testing midterm email job
+app.post('/test/midterm-email', async (_req, res) => {
+  await sendMidtermEmails();
+  res.json({ success: true });
 });
 
 // eslint-disable-next-line no-unused-vars
