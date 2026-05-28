@@ -164,7 +164,11 @@ export default {
   // === OAKTON ENROLLED ===
   async getAllOaktonEnrolled() {
     const { rows } = await pgPool.query(
-      `SELECT * FROM oakton_enrolled WHERE is_archived = FALSE ORDER BY enrolled_at DESC`
+      `SELECT oe.*, oi.racial_identity
+       FROM oakton_enrolled oe
+       LEFT JOIN oakton_intakes oi ON oi.id = oe.intake_id
+       WHERE oe.is_archived = FALSE
+       ORDER BY oe.enrolled_at DESC`
     );
     return rows;
   },
