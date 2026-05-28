@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 
+import './jobs/midtermEmail.js';
 import authRoutes from './routes/authRoutes.js';
 import customQuestionRoutes from './routes/customQuestionRoutes.js';
 import ihtuInfoRoutes from './routes/ihtuInfoRoutes.js';
