@@ -146,18 +146,22 @@ router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
         console.error('Failed to auto-create enrolled record:', err);
       }
 
-      transporter.sendMail({
-        from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
-        to: updated.email,
-        subject: "Congratulations — You've Been Selected for the WEI Grant",
-        html: `
-          <p>Hi ${updated.first_name},</p>
-          <p>We're excited to let you know that you've been <strong>selected to receive the Workforce Empowerment Initiative (WEI) grant</strong>!</p>
-          <p>Someone from our team will be reaching out soon with next steps. In the meantime, if you have any questions, feel free to contact us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
-          <p>We look forward to supporting you on your journey.</p>
-          <p>— The Oakton WEI Team</p>
-        `,
-      }).catch((err) => console.error('Acceptance email failed:', err));
+      try {
+        await transporter.sendMail({
+          from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
+          to: updated.email,
+          subject: "Congratulations — You've Been Selected for the WEI Grant",
+          html: `
+            <p>Hi ${updated.first_name},</p>
+            <p>We're excited to let you know that you've been <strong>selected to receive the Workforce Empowerment Initiative (WEI) grant</strong>!</p>
+            <p>Someone from our team will be reaching out soon with next steps. In the meantime, if you have any questions, feel free to contact us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+            <p>We look forward to supporting you on your journey.</p>
+            <p>— The Oakton WEI Team</p>
+          `,
+        });
+      } catch (emailErr) {
+        console.error('Acceptance email failed:', emailErr.message);
+      }
     }
 
     res.json({ success: true, intake: updated });
