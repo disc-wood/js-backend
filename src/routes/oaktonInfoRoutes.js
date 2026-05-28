@@ -216,7 +216,7 @@ router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
           subject: "Congratulations on Completing Your Program!",
           html: `
             <p>Hi ${updated.first_name},</p>
-            <p>Congratulations on completing your program with the <strong>Workforce Empowerment Initiative</strong>! This is a huge accomplishment and we are so proud of everything you've achieved.</p>
+            <p>Congratulations on completing${updated.program_name ? ` the <strong>${updated.program_name}</strong> program` : ' your program'} with the <strong>Workforce Empowerment Initiative</strong>! This is a huge accomplishment and we are so proud of everything you've achieved.</p>
             <p>We wish you all the best in your next steps. If you ever need support or want to stay connected, don't hesitate to reach out to us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
             <p>We look forward to hearing about your continued success.</p>
             <p>— The Oakton WEI Team</p>
