@@ -92,4 +92,11 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+
+  import('./config/mailer.js').then(({ default: transporter }) => {
+    transporter.verify((err) => {
+      if (err) console.error('Mailer not ready:', err.message);
+      else console.log('Mailer ready');
+    });
+  });
 });

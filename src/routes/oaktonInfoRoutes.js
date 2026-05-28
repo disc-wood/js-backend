@@ -90,23 +90,28 @@ router.post('/intakes', async (req, res) => {
       customQuestion: customQuestionSnapshot,
     });
 
-    transporter.sendMail({
-      from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
-      to: req.body.email,
-      subject: 'Your Oakton WEI Application Has Been Received',
-      html: `
-        <p>Hi ${req.body.firstName},</p>
-        <p>We've received your application for the <strong>Oakton Workforce Empowerment Initiative</strong>. Someone from our team will be in contact with you soon.</p>
-        <p>A few things to keep in mind:</p>
-        <ul>
-          ${req.body.intakeSessionDate ? `<li>Please make note of the intake session date you selected: <strong>${req.body.intakeSessionDate}</strong>.</li>` : ''}
-          <li>Your intake session Zoom link: <a href="${INTAKE_SESSION_ZOOM_LINK}">${INTAKE_SESSION_ZOOM_LINK}</a></li>
-          <li>Make sure you submit your supporting documents before the session.</li>
-        </ul>
-        <p>Questions? Email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
-        <p>— The Oakton WEI Team</p>
-      `,
-    }).catch((err) => console.error('Oakton confirmation email failed:', err));
+    try {
+      await transporter.sendMail({
+        from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
+        to: req.body.email,
+        subject: 'Your Oakton WEI Application Has Been Received',
+        html: `
+          <p>Hi ${req.body.firstName},</p>
+          <p>We've received your application for the <strong>Oakton Workforce Empowerment Initiative</strong>. Someone from our team will be in contact with you soon.</p>
+          <p>A few things to keep in mind:</p>
+          <ul>
+            ${req.body.intakeSessionDate ? `<li>Please make note of the intake session date you selected: <strong>${req.body.intakeSessionDate}</strong>.</li>` : ''}
+            <li>Your intake session Zoom link: <a href="${INTAKE_SESSION_ZOOM_LINK}">${INTAKE_SESSION_ZOOM_LINK}</a></li>
+            <li>Make sure you submit your supporting documents before the session.</li>
+          </ul>
+          <p>Questions? Email <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+          <p>— The Oakton WEI Team</p>
+        `,
+      });
+    } catch (emailErr) {
+      console.error('Oakton confirmation email failed:', emailErr);
+      return res.status(201).json({ success: true, intake: created, emailError: emailErr.message });
+    }
 
     res.status(201).json({ success: true, intake: created });
   } catch (error) {
