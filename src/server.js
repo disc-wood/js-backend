@@ -3,8 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 
-import './jobs/midtermEmail.js';
-import { sendMidtermEmails } from './jobs/midtermEmail.js';
 import authRoutes from './routes/authRoutes.js';
 import emailTemplateRoutes from './routes/emailTemplateRoutes.js';
 import customQuestionRoutes from './routes/customQuestionRoutes.js';
@@ -68,14 +66,6 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Cron trigger for midterm email job — Vercel sends Authorization: Bearer <CRON_SECRET>
-app.post('/cron/midterm-email', async (req, res) => {
-  if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  await sendMidtermEmails();
-  res.json({ success: true });
-});
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
