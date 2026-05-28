@@ -208,6 +208,25 @@ router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Enrolled record not found' });
     }
 
+    if (req.body.program_completed === true && updated.email) {
+      try {
+        await transporter.sendMail({
+          from: `"Oakton WEI Program" <${process.env.GMAIL_USER}>`,
+          to: updated.email,
+          subject: "Congratulations on Completing Your Program!",
+          html: `
+            <p>Hi ${updated.first_name},</p>
+            <p>Congratulations on completing your program with the <strong>Workforce Empowerment Initiative</strong>! This is a huge accomplishment and we are so proud of everything you've achieved.</p>
+            <p>We wish you all the best in your next steps. If you ever need support or want to stay connected, don't hesitate to reach out to us at <a href="mailto:wei@oakton.edu">wei@oakton.edu</a>.</p>
+            <p>We look forward to hearing about your continued success.</p>
+            <p>— The Oakton WEI Team</p>
+          `,
+        });
+      } catch (emailErr) {
+        console.error('Program completion email failed:', emailErr.message);
+      }
+    }
+
     res.json({ success: true, enrolled: updated });
   } catch (error) {
     console.error('Failed to update enrolled record:', error);
