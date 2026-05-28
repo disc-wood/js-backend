@@ -200,7 +200,7 @@ router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Enrolled record not found' });
     }
 
-    if (req.body.program_completed === true && updated.email) {
+    if (req.body.program_status === 'Completed' && updated.email) {
       try {
         const tmpl = await getTemplate('oakton-program-completed');
         const html = tmpl
