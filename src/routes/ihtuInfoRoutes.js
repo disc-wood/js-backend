@@ -69,9 +69,8 @@ router.post('/intakes', async (req, res) => {
       customQuestion: customQuestionSnapshot,
     });
 
-    // Send confirmation email (non-blocking)
-    transporter
-      .sendMail({
+    try {
+      await transporter.sendMail({
         from: `"I Hope They Understand" <${process.env.GMAIL_USER}>`,
         to: req.body.email,
         subject: 'Your IHTU Application Has Been Received',
@@ -80,8 +79,11 @@ router.post('/intakes', async (req, res) => {
           <p>Thank you for submitting your <strong>I Hope They Understand</strong> application. We've received your information and will be in touch soon.</p>
           <p>— The IHTU Team</p>
         `,
-      })
-      .catch((err) => console.error('IHTU confirmation email failed:', err));
+      });
+    } catch (emailErr) {
+      console.error('IHTU confirmation email failed:', emailErr);
+      return res.status(201).json({ success: true, intake: created, emailError: emailErr.message });
+    }
 
     res.status(201).json({ success: true, intake: created });
   } catch (error) {
