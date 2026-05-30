@@ -21,7 +21,7 @@ router.get('/', authMiddleware, async (_req, res) => {
   }
 });
 
-// PATCH a single template's subject and body
+// PATCH a single template's subject and body (must already exist)
 router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const { subject, body } = req.body;
@@ -40,6 +40,26 @@ router.patch('/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Failed to update email template:', err);
     res.status(500).json({ error: 'Failed to update template' });
+  }
+});
+
+// PUT — upsert (create or update) a template by id
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { subject, body } = req.body;
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'subject and body are required' });
+    }
+    const { data, error } = await getSupabase()
+      .from('email_templates')
+      .upsert({ id: req.params.id, subject, body, updated_at: new Date().toISOString() })
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ success: true, template: data });
+  } catch (err) {
+    console.error('Failed to upsert email template:', err);
+    res.status(500).json({ error: 'Failed to save template' });
   }
 });
 

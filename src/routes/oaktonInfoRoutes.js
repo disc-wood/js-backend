@@ -38,6 +38,13 @@ function isEmpty(value) {
   return false;
 }
 
+// Derives the per-program accepted-email template ID from a program label.
+// Must stay in sync with the slugifyProgram function in Communications.jsx.
+function slugifyProgram(label) {
+  return 'oakton-accepted-' +
+    label.toLowerCase().replace(/[()]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 // Returns true if the user (uid, role) has access to the oakton program
 async function hasOaktonAccess(uid, role) {
   if (role === 'admin') return true;
@@ -141,7 +148,9 @@ router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
       }
 
       try {
-        const tmpl = await getTemplate('oakton-accepted');
+        const firstProgram = Array.isArray(updated.programs_of_interest) && updated.programs_of_interest[0];
+        const specificId = firstProgram ? slugifyProgram(firstProgram) : null;
+        const tmpl = (specificId && await getTemplate(specificId)) || await getTemplate('oakton-accepted');
         const html = tmpl
           ? renderTemplate(tmpl.body, { first_name: updated.first_name })
           : `<p>Hi ${updated.first_name},</p><p>Congratulations — you've been selected for the WEI grant!</p>`;
@@ -365,6 +374,93 @@ router.delete('/intake-sessions/:id', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Failed to delete intake session:', error);
     res.status(500).json({ error: 'Failed to delete intake session' });
+  }
+});
+
+// === PROGRAMS OF INTEREST ===
+
+// PUBLIC — intake form and Communications page fetch this
+router.get('/programs', async (_req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('oakton_programs')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Failed to fetch programs:', error);
+    res.status(500).json({ error: 'Failed to fetch programs' });
+  }
+});
+
+// PROTECTED — add a program
+router.post('/programs', authMiddleware, async (req, res) => {
+  try {
+    if (!await hasOaktonAccess(req.user.uid, req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const { label, sort_order } = req.body;
+    if (!label?.trim()) {
+      return res.status(400).json({ error: 'label is required' });
+    }
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('oakton_programs')
+      .insert({ label: label.trim(), is_active: true, sort_order: sort_order ?? 0 })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json({ success: true, program: data });
+  } catch (error) {
+    console.error('Failed to create program:', error);
+    res.status(500).json({ error: 'Failed to create program' });
+  }
+});
+
+// PROTECTED — update a program (label, is_active, sort_order)
+router.patch('/programs/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!await hasOaktonAccess(req.user.uid, req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const updates = {};
+    if (req.body.label !== undefined) updates.label = req.body.label;
+    if (req.body.is_active !== undefined) updates.is_active = req.body.is_active;
+    if (req.body.sort_order !== undefined) updates.sort_order = req.body.sort_order;
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('oakton_programs')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Program not found' });
+    res.json({ success: true, program: data });
+  } catch (error) {
+    console.error('Failed to update program:', error);
+    res.status(500).json({ error: 'Failed to update program' });
+  }
+});
+
+// PROTECTED — delete a program
+router.delete('/programs/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!await hasOaktonAccess(req.user.uid, req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('oakton_programs')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete program:', error);
+    res.status(500).json({ error: 'Failed to delete program' });
   }
 });
 
