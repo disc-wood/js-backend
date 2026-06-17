@@ -38,10 +38,10 @@ function isEmpty(value) {
   return false;
 }
 
-// Derives the per-program accepted-email template ID from a program label.
+// Derives a per-program email template ID from an email's base id and a program label.
 // Must stay in sync with the slugifyProgram function in Communications.jsx.
-function slugifyProgram(label) {
-  return 'oakton-accepted-' +
+function slugifyProgram(baseId, label) {
+  return baseId + '-' +
     label.toLowerCase().replace(/[()]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
@@ -98,7 +98,9 @@ router.post('/intakes', async (req, res) => {
     });
 
     try {
-      const tmpl = await getTemplate('oakton-application-received');
+      const firstProgram = Array.isArray(req.body.programsOfInterest) && req.body.programsOfInterest[0];
+      const specificId = firstProgram ? slugifyProgram('oakton-application-received', firstProgram) : null;
+      const tmpl = (specificId && await getTemplate(specificId)) || await getTemplate('oakton-application-received');
       const html = tmpl
         ? renderTemplate(tmpl.body, { first_name: req.body.firstName })
         : `<p>Hi ${req.body.firstName},</p><p>We've received your application. Someone will be in touch soon.</p>`;
@@ -149,7 +151,7 @@ router.patch('/intakes/:id/status', authMiddleware, async (req, res) => {
 
       try {
         const firstProgram = Array.isArray(updated.programs_of_interest) && updated.programs_of_interest[0];
-        const specificId = firstProgram ? slugifyProgram(firstProgram) : null;
+        const specificId = firstProgram ? slugifyProgram('oakton-accepted', firstProgram) : null;
         const tmpl = (specificId && await getTemplate(specificId)) || await getTemplate('oakton-accepted');
         const html = tmpl
           ? renderTemplate(tmpl.body, { first_name: updated.first_name })
@@ -211,7 +213,8 @@ router.patch('/enrolled/:id', authMiddleware, async (req, res) => {
 
     if (req.body.program_status === 'Completed' && updated.email) {
       try {
-        const tmpl = await getTemplate('oakton-program-completed');
+        const specificId = updated.program_name ? slugifyProgram('oakton-program-completed', updated.program_name) : null;
+        const tmpl = (specificId && await getTemplate(specificId)) || await getTemplate('oakton-program-completed');
         const html = tmpl
           ? renderTemplate(tmpl.body, { first_name: updated.first_name, program_name: updated.program_name || '' })
           : `<p>Hi ${updated.first_name},</p><p>Congratulations on completing your program!</p>`;
