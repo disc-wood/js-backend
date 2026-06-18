@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import transporter from '../config/mailer.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import requireAdmin from '../middleware/requireAdmin.js';
+import { getTemplate, renderTemplate } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -10,6 +11,12 @@ const getSupabase = () => createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+// Must stay in sync with the `programs` list in config/programs.js on the frontend.
+const PROGRAM_LABELS = {
+  oakton: 'Oakton College',
+  ihtu: 'I Hope They Understand',
+};
 
 // Admin only — generate invite and send email
 router.post('/generate', authMiddleware, requireAdmin, async (req, res) => {
@@ -31,19 +38,24 @@ router.post('/generate', authMiddleware, requireAdmin, async (req, res) => {
 
   const baseUrl = process.env.FRONTEND_URL || process.env.FRONTEND_URL_DEV;
   const inviteLink = `${baseUrl}/invite?token=${data.token}`;
+  const programName = PROGRAM_LABELS[programId] || programId;
 
   try {
-    await transporter.sendMail({
-      from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: "You've been invited to the Learner Tracking System",
-      html: `
+    const tmpl = await getTemplate(`invite-${programId}`);
+    const html = tmpl
+      ? renderTemplate(tmpl.body, { program_name: programName, invite_link: inviteLink })
+      : `
         <p>Hi,</p>
-        <p>You've been invited to supervise a program on the Learner Tracking System.</p>
+        <p>You've been invited to supervise the ${programName} program on the Learner Tracking System.</p>
         <p>Click the link below to accept your invitation:</p>
         <a href="${inviteLink}">${inviteLink}</a>
         <p>This link will expire in 7 days.</p>
-      `,
+      `;
+    await transporter.sendMail({
+      from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: tmpl?.subject || "You've been invited to the Learner Tracking System",
+      html,
     });
   } catch (emailError) {
     console.error('Email failed:', emailError);
@@ -168,9 +180,31 @@ router.delete('/revoke', authMiddleware, requireAdmin, async (req, res) => {
     .select('program_id')
     .eq('user_id', userId);
 
+  const admin = (await import('../config/firebase.js')).default;
+
   if (!remaining || remaining.length === 0) {
-    const admin = (await import('../config/firebase.js')).default;
     await admin.auth().setCustomUserClaims(userId, {});
+  }
+
+  try {
+    const user = await admin.auth().getUser(userId);
+    const programName = PROGRAM_LABELS[programId] || programId;
+    const tmpl = await getTemplate(`revoke-${programId}`);
+    const html = tmpl
+      ? renderTemplate(tmpl.body, { program_name: programName })
+      : `
+        <p>Hi,</p>
+        <p>Your access to the ${programName} program on the Learner Tracking System has been revoked.</p>
+        <p>If you believe this was a mistake, please contact your admin.</p>
+      `;
+    await transporter.sendMail({
+      from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
+      to: user.email,
+      subject: tmpl?.subject || `Your access to ${programName} has been revoked`,
+      html,
+    });
+  } catch (emailError) {
+    console.error('Revocation email failed:', emailError.message);
   }
 
   return res.json({ success: true });
@@ -181,12 +215,41 @@ router.delete('/cancel/:token', authMiddleware, requireAdmin, async (req, res) =
   const supabase = getSupabase();
   const { token } = req.params;
 
+  const { data: invitation } = await supabase
+    .from('invitations')
+    .select('*')
+    .eq('token', token)
+    .maybeSingle();
+
   const { error } = await supabase
     .from('invitations')
     .delete()
     .eq('token', token);
 
   if (error) return res.status(500).json({ error: error.message });
+
+  if (invitation) {
+    try {
+      const programName = PROGRAM_LABELS[invitation.program_id] || invitation.program_id;
+      const tmpl = await getTemplate(`cancel-${invitation.program_id}`);
+      const html = tmpl
+        ? renderTemplate(tmpl.body, { program_name: programName })
+        : `
+          <p>Hi,</p>
+          <p>Your invitation to supervise the ${programName} program on the Learner Tracking System has been canceled.</p>
+          <p>If you believe this was a mistake, please contact your admin.</p>
+        `;
+      await transporter.sendMail({
+        from: `"Learner Tracking System" <${process.env.GMAIL_USER}>`,
+        to: invitation.email,
+        subject: tmpl?.subject || `Your invitation to ${programName} has been canceled`,
+        html,
+      });
+    } catch (emailError) {
+      console.error('Cancellation email failed:', emailError.message);
+    }
+  }
+
   return res.json({ success: true });
 });
 
