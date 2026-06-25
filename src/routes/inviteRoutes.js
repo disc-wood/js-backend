@@ -23,6 +23,25 @@ router.post('/generate', authMiddleware, requireAdmin, async (req, res) => {
   const supabase = getSupabase();
   const { email, programId } = req.body;
 
+  const admin = (await import('../config/firebase.js')).default;
+  try {
+    const existingUser = await admin.auth().getUserByEmail(email);
+    const { data: existingAssignment } = await supabase
+      .from('user_assignments')
+      .select('id')
+      .eq('user_id', existingUser.uid)
+      .eq('program_id', programId)
+      .maybeSingle();
+
+    if (existingAssignment) {
+      return res.status(400).json({ error: 'This supervisor already has access' });
+    }
+  } catch (err) {
+    if (err.code !== 'auth/user-not-found') {
+      console.error('Error checking existing access:', err);
+    }
+  }
+
   const { data, error } = await supabase
     .from('invitations')
     .insert({
