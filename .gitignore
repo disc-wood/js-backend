@@ -4,3 +4,4 @@ functions/.env
 *.ini
 node_modules/
 setAdmin.mjs
+setAdmin.cjs
